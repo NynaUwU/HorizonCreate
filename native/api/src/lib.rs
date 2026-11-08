@@ -20,7 +20,7 @@ use engine::kinetics::Axis;
 use horizon_client::mod_api::{
     BlockEntityEvent, BlockEntityRenderBoundingBoxEvent, BlockEntitySubmitEvent, BlockEntityTickEvent,
     BlockEntityTicksEvent, BlockEntityUpdateTagEvent, Compound, Hooks, Host, LevelTickPostEvent,
-    LevelTickPreEvent, ModBlockEntity, StandaloneModelsEvent, Tag, Text,
+    LevelTickPreEvent, ModBlockEntity, ModsEvent, NativeMod, StandaloneModelsEvent, Tag, Text,
 };
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -104,7 +104,23 @@ fn spinning_model(name: &str) -> Option<&'static str> {
     hcglue::SPINNING_MODELS.iter().find(|(n, _)| *n == name).map(|(_, m)| *m)
 }
 
+/// Shown in Options > Mods, so players can see the native half is in their build.
+/// Its own id: the content mod's row (`horizon_create`) keeps its switch.
+const NATIVE_ID: &str = "horizon_create_native";
+const VERSION: &str = "0.2.2";
+
 impl Hooks for Mod {
+    fn mods(&self, _host: &mut dyn Host, event: &mut ModsEvent<'_>) {
+        event.mods.push(NativeMod {
+            id: NATIVE_ID.to_string(),
+            title: format!("Horizon Create (native) {VERSION}"),
+            description: "Kinetics for Horizon Create: turning shafts, gauges and machines. \
+                          Needs the Horizon Create content mod turned on."
+                .to_string(),
+            keys: Vec::new(),
+        });
+    }
+
     fn standalone_models(&self, event: &mut StandaloneModelsEvent<'_>) {
         for (_, model) in hcglue::SPINNING_MODELS {
             event.models.push((*model).to_string());

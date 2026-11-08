@@ -5,7 +5,7 @@
 # see horizon-native.json in the .hnmod), so newer Horizon versions build it too.
 [mod]
 id = "horizon_create"
-version = "0.2.1"
+version = "0.2.2"
 
 [compatibility]
 horizon_revision = "6560641ba51a452f6bc2407baa4eb1b3be517ca8"

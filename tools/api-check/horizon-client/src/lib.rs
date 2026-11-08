@@ -48,7 +48,11 @@ pub mod mod_api {
     #[non_exhaustive] pub struct BlockEntityUpdateTagEvent<'a> { pub pos: [i32; 3], pub entity: &'a ModBlockEntity }
     #[non_exhaustive] pub struct BlockEntityRenderBoundingBoxEvent<'a> { pub pos: [i32; 3], pub block: &'a str, pub state: BlockStateId, pub entity: &'a ModBlockEntity, pub bounds: &'a mut [f32; 6] }
     #[non_exhaustive] pub struct BlockEntitySubmitEvent<'a> { pub pos: [i32; 3], pub block: &'a str, pub state: BlockStateId, pub entity: &'a ModBlockEntity, pub draw: &'a mut BlockEntityDraw }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct NativeMod { pub id: String, pub title: String, pub description: String, pub keys: Vec<[String; 3]> }
+    #[non_exhaustive] pub struct ModsEvent<'a> { pub mods: &'a mut Vec<NativeMod> }
     pub trait Hooks: Send + Sync {
+        fn mods(&self, _host: &mut dyn Host, _event: &mut ModsEvent<'_>) {}
         fn standalone_models(&self, _event: &mut StandaloneModelsEvent<'_>) {}
         fn block_entity(&self, _host: &mut dyn Host, _event: &mut BlockEntityEvent<'_>) -> Option<(String, Compound)> { None }
         fn block_entity_ticks(&self, _host: &dyn Host, _event: &mut BlockEntityTicksEvent<'_>) {}
