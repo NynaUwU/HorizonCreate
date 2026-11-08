@@ -7,4 +7,4 @@ edition = "2024"
 # The launcher points this at the Horizon source it builds the game from. Any other
 # dependency must be a crate and version in Horizon's Cargo.lock (this mod has none:
 # the engine is copied into src/engine by tools/sync_native.py).
-horizon-client = { git = "https://github.com/horizon-rust/horizon" }
+horizon-client = { git = "https://github.com/horizon-rust/horizon", rev = "6560641ba51a452f6bc2407baa4eb1b3be517ca8" }
