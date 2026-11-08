@@ -42,7 +42,7 @@ struct Mod {
 const KEYS: [&str; 4] = ["rpm", "impact", "capacity", "status"];
 const DRILL_HEAD: &str = "horizon_create:block/drill_head";
 
-fn read(nbt: &Compound, key: &str) -> Option<&Tag> {
+fn read<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
     nbt.iter().find(|(k, _)| k.0.iter().copied().eq(key.encode_utf16())).map(|(_, v)| v)
 }
 
@@ -112,10 +112,9 @@ impl Hooks for Mod {
         event.models.push(DRILL_HEAD.to_string());
     }
 
-    fn block_entity(&self, _host: &mut dyn Host, event: &mut BlockEntityEvent<'_>) {
-        if event.entity.is_none() && hcglue::local_name(event.block).is_some() {
-            *event.entity = Some((event.block.to_string(), Compound::new()));
-        }
+    // "replace" hook: return the block entity (id, saved compound) for our blocks
+    fn block_entity(&self, _host: &mut dyn Host, event: &mut BlockEntityEvent<'_>) -> Option<(String, Compound)> {
+        hcglue::local_name(event.block).map(|_| (event.block.to_string(), Compound::new()))
     }
 
     fn block_entity_ticks(&self, _host: &dyn Host, event: &mut BlockEntityTicksEvent<'_>) {
@@ -176,7 +175,7 @@ impl Hooks for Mod {
                 DrillAction::Reset => host.set_break_progress(breaker, target, -1),
                 DrillAction::Break => {
                     host.set_break_progress(breaker, target, -1);
-                    host.machine_destroy_block(target, None, false);
+                    host.destroy_block(target, None, false);
                 }
             }
             if state != before {
@@ -191,12 +190,11 @@ impl Hooks for Mod {
         self.engine.lock().unwrap().end_level();
     }
 
-    fn block_entity_update_tag(&self, event: &mut BlockEntityUpdateTagEvent<'_>) {
-        if hcglue::local_name(&event.entity.id).is_none() {
-            return;
-        }
+    // "replace" hook: return what clients get of our block entities
+    fn block_entity_update_tag(&self, event: &mut BlockEntityUpdateTagEvent<'_>) -> Option<Compound> {
+        hcglue::local_name(&event.entity.id)?;
         let r = readout_of(&event.entity.nbt);
-        *event.tag = Some(readout_tags(&r).into_iter().map(|(k, v)| (k.into(), v)).collect());
+        Some(readout_tags(&r).into_iter().map(|(k, v)| (k.into(), v)).collect())
     }
 
     fn block_entity_render_bounding_box(

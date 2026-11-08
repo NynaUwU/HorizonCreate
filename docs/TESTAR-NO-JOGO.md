@@ -9,7 +9,7 @@ O mod tem duas metades com o mesmo id (`horizon_create`):
 
 ## 1. Preparar os arquivos
 
-**Atalho:** os arquivos prontos estão em [`releases/v0.2.0/`](../releases/v0.2.0/) (`.hmod` e `.hnmod`).
+**Atalho:** os arquivos prontos estão em [`releases/v0.2.1/`](../releases/v0.2.1/) (`.hmod` e `.hnmod`).
 Para gerar de novo depois de mudar algo:
 
 ```sh
@@ -24,7 +24,7 @@ python3 tools/package.py          # gera dist/horizon_create-<versão>.hmod e .h
 
 Na pasta do jogo (a que tem o `options.txt`):
 
-1. Copie **`horizon_create-0.2.0.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
+1. Copie **`horizon_create-0.2.1.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
 2. Abra o jogo → **Opções → Mods** → ligue **Horizon Create**.
 3. Como o mod adiciona blocos, o jogo pede para **reiniciar**. Reinicie.
 4. Se algo estiver errado, a linha do mod fica **vermelha** com o motivo.
@@ -41,7 +41,7 @@ cd mod && cargo horizon-mod run
 
 ## 3. Instalar o native mod
 
-1. Copie **`horizon_create-0.2.0.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
+1. Copie **`horizon_create-0.2.1.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
 2. O launcher mostra o aviso de confiança (mods nativos não rodam em sandbox) e **compila o jogo com o mod**.
    A primeira compilação demora bastante.
 
@@ -51,10 +51,10 @@ Ou pela linha de comando:
 horizon-launcher native-build native --instance <sua instância> --trust-native-code
 ```
 
-> ⚠️ O adaptador `native/api/src/lib.rs` foi escrito seguindo a API do Horizon, mas **não pude compilá-lo
-> aqui** (o ambiente não deixa compilar o código do Horizon). A lógica em si (`engine/`) é testada e compila.
-> Se a compilação falhar, me mande o `build.log` que o launcher indica: em geral são ajustes pequenos de nome
-> ou tipo.
+> ⚠️ O mod nativo é verificado aqui contra uma **réplica** da API do Horizon
+> (`tools/api-check/`, montada a partir do gerador de API da Nightly 6560641), não contra o jogo de verdade.
+> A 0.2.1 passa nela sem erros nem avisos, e a réplica reproduz exatamente os erros da 0.1.0. Se ainda
+> assim a compilação falhar, mande o `build.log` que o launcher indica.
 
 ## 4. O que testar (modo criativo, aba **Horizon Create**)
 

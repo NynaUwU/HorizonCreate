@@ -1,0 +1,16 @@
+# Type-checks native/api/src/lib.rs against tools/api-check/horizon-client, a mock of the
+# parts of Horizon's generated mod API the mod uses (Nightly 6560641). Not the real game:
+# it catches signature and borrow mistakes before the launcher's long build.
+#   cargo check --manifest-path tools/api-check/adapter/Cargo.toml
+[package]
+name = "mod-horizon_create"
+version = "0.0.0"
+edition = "2024"
+
+[lib]
+path = "../../../native/api/src/lib.rs"
+
+[dependencies]
+horizon-client = { path = "../horizon-client" }
+
+[workspace]
