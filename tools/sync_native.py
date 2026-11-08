@@ -29,6 +29,7 @@ def main():
     rewrite = lambda s: s.replace("use kinetics::", "use super::kinetics::")
     copy("hcglue/src/lib.rs", DST / "hcglue" / "mod.rs", rewrite)
     copy("hcglue/src/drill.rs", DST / "hcglue" / "drill.rs", rewrite)
+    copy("hcglue/src/setup.rs", DST / "hcglue" / "setup.rs", rewrite)
     (DST / "mod.rs").write_text(HEADER.format(src="tools/sync_native.py")
                                 + "#![allow(dead_code, unused_imports)]\npub mod hcglue;\npub mod kinetics;\n")
     print(f"synced -> {DST.relative_to(ROOT)}")

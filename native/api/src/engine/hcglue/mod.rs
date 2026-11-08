@@ -16,6 +16,7 @@
 //! arguments without the part jumping when the speed changes.
 
 pub mod drill;
+pub mod setup;
 
 use super::kinetics::presets::{capacity, impact};
 use super::kinetics::{Axis, BlockKind, KineticBlock, KineticWorld, NodeRole, Pos, Status, WorldSolution};

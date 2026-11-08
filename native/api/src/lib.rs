@@ -15,12 +15,13 @@
 mod engine;
 
 use engine::hcglue::drill::{self, DrillAction, DrillState};
+use engine::hcglue::setup;
 use engine::hcglue::{self, Engine, Readout, Spinner};
 use engine::kinetics::Axis;
 use horizon_client::mod_api::{
     BlockEntityEvent, BlockEntityRenderBoundingBoxEvent, BlockEntitySubmitEvent, BlockEntityTickEvent,
     BlockEntityTicksEvent, BlockEntityUpdateTagEvent, Compound, Hooks, Host, LevelTickPostEvent,
-    LevelTickPreEvent, ModBlockEntity, ModsEvent, NativeMod, StandaloneModelsEvent, Tag, Text,
+    LevelTickPreEvent, ModBlockEntity, ModsEvent, NativeMod, PlayerLoggedInEvent, StandaloneModelsEvent, Tag, Text,
 };
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -107,9 +108,18 @@ fn spinning_model(name: &str) -> Option<&'static str> {
 /// Shown in Options > Mods, so players can see the native half is in their build.
 /// Its own id: the content mod's row (`horizon_create`) keeps its switch.
 const NATIVE_ID: &str = "horizon_create_native";
-const VERSION: &str = "0.2.2";
+const VERSION: &str = "0.2.3";
 
 impl Hooks for Mod {
+    /// Without the content mod nothing shows up and the game only logs missing models:
+    /// say which step is missing when a player joins.
+    fn player_logged_in(&self, host: &mut dyn Host, event: &mut PlayerLoggedInEvent<'_>) {
+        let instance = host.instance_dir();
+        if let Some(line) = setup::status_message(setup::content_status(&instance), &instance) {
+            host.tell(event.player, Text::literal(line));
+        }
+    }
+
     fn mods(&self, _host: &mut dyn Host, event: &mut ModsEvent<'_>) {
         event.mods.push(NativeMod {
             id: NATIVE_ID.to_string(),

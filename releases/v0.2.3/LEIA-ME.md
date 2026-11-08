@@ -1,14 +1,18 @@
-# Horizon Create 0.2.2 — arquivos prontos
+# Horizon Create 0.2.3 — arquivos prontos
 
 | Arquivo | Onde colocar (pasta do jogo, a que tem `options.txt`) |
 |---|---|
-| `horizon_create-0.2.2.hmod` | `horizon-mods/` → Opções → Mods → ligar → reiniciar |
-| `horizon_create-0.2.2.hnmod` | `horizon-native-mods/` → o launcher compila o jogo com o mod |
+| `horizon_create-0.2.3.hmod` | `horizon-mods/` → Opções → Mods → ligar → reiniciar |
+| `horizon_create-0.2.3.hnmod` | `horizon-native-mods/` → o launcher compila o jogo com o mod |
 
 - Mods nativos do Horizon são distribuídos **como código-fonte**: o launcher compila junto com o jogo
   na sua máquina (é assim para todos os mods nativos).
 - Precisa do Horizon com hooks API **411 ou mais nova** (Nightly de 07/11/2026 em diante).
 - `SHA256SUMS` confere os arquivos baixados.
+
+## 0.2.3
+
+- Ao entrar no mundo, o mod nativo avisa no chat se o content mod **não está instalado** em `horizon-mods/` da instância ou se está **desligado** em Opções → Mods (antes o jogo só registrava modelos faltando no log).
 
 ## 0.2.2
 

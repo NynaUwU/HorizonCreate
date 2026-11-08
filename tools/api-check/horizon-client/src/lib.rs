@@ -37,6 +37,8 @@ pub mod mod_api {
         fn destroy_block(&mut self, _pos: [i32; 3], _tool: Option<&ItemStack>, _collect: bool) -> Option<Vec<ItemStack>> { unimplemented!() }
         fn block_state_property(&self, _state: BlockStateId, _key: &str) -> Option<&str> { unimplemented!() }
         fn draw_model(&self, _draw: &mut BlockEntityDraw, _model: &str, _tint: u32) -> bool { unimplemented!() }
+        fn tell(&mut self, _uuid: u128, _line: Text) -> bool { unimplemented!() }
+        fn instance_dir(&self) -> std::path::PathBuf { unimplemented!() }
         fn draw_text(&self, _draw: &mut BlockEntityDraw, _text: &Text, _at: [f32; 2], _color: u32, _glowing: bool, _outline: u32) -> f32 { unimplemented!() }
     }
     #[non_exhaustive] pub struct StandaloneModelsEvent<'a> { pub models: &'a mut Vec<String> }
@@ -51,7 +53,9 @@ pub mod mod_api {
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct NativeMod { pub id: String, pub title: String, pub description: String, pub keys: Vec<[String; 3]> }
     #[non_exhaustive] pub struct ModsEvent<'a> { pub mods: &'a mut Vec<NativeMod> }
+    #[non_exhaustive] pub struct PlayerLoggedInEvent<'a> { pub player: u128, pub name: &'a str }
     pub trait Hooks: Send + Sync {
+        fn player_logged_in(&self, _host: &mut dyn Host, _event: &mut PlayerLoggedInEvent<'_>) {}
         fn mods(&self, _host: &mut dyn Host, _event: &mut ModsEvent<'_>) {}
         fn standalone_models(&self, _event: &mut StandaloneModelsEvent<'_>) {}
         fn block_entity(&self, _host: &mut dyn Host, _event: &mut BlockEntityEvent<'_>) -> Option<(String, Compound)> { None }

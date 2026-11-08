@@ -9,7 +9,7 @@ O mod tem duas metades com o mesmo id (`horizon_create`):
 
 ## 1. Preparar os arquivos
 
-**Atalho:** os arquivos prontos estão em [`releases/v0.2.2/`](../releases/v0.2.2/) (`.hmod` e `.hnmod`).
+**Atalho:** os arquivos prontos estão em [`releases/v0.2.3/`](../releases/v0.2.3/) (`.hmod` e `.hnmod`).
 Para gerar de novo depois de mudar algo:
 
 ```sh
@@ -24,7 +24,7 @@ python3 tools/package.py          # gera dist/horizon_create-<versão>.hmod e .h
 
 Na pasta do jogo (a que tem o `options.txt`):
 
-1. Copie **`horizon_create-0.2.2.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
+1. Copie **`horizon_create-0.2.3.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
 2. Abra o jogo → **Opções → Mods** → ligue **Horizon Create**.
 3. Como o mod adiciona blocos, o jogo pede para **reiniciar**. Reinicie.
 4. Se algo estiver errado, a linha do mod fica **vermelha** com o motivo.
@@ -41,7 +41,7 @@ cd mod && cargo horizon-mod run
 
 ## 3. Instalar o native mod
 
-1. Copie **`horizon_create-0.2.2.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
+1. Copie **`horizon_create-0.2.3.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
 2. O launcher mostra o aviso de confiança (mods nativos não rodam em sandbox) e **compila o jogo com o mod**.
    A primeira compilação demora bastante.
 
@@ -57,6 +57,18 @@ horizon-launcher native-build native --instance <sua instância> --trust-native-
 > assim a compilação falhar, mande o `build.log` que o launcher indica.
 
 ## Não apareceu nada? (diagnóstico)
+
+**Sinal no log:** se aparece `standalone model horizon_create:block/shaft not loaded` e a linha
+`resources loaded ...; 35723 block states, 1658 items` (a contagem do vanilla), o mod nativo está na build,
+mas o **content mod não foi carregado**. Desde a 0.2.3 o mod nativo também avisa isso no chat ao entrar no mundo.
+
+O `.hmod` vai em `horizon-mods/` **dentro da pasta da instância** que você joga (a do `options.txt`). Para ver
+qual é a pasta:
+
+```sh
+horizon-launcher instance list
+```
+
 
 1. **Opções → Mods**: devem aparecer duas linhas.
    - **Horizon Create**: o content mod. A chave precisa estar **ligada**, e depois de ligar é preciso **reiniciar** o jogo.
