@@ -3,6 +3,14 @@
 version = 4
 
 [[package]]
+name = "electrokinetic"
+version = "0.1.0"
+dependencies = [
+ "grid",
+ "kinetics",
+]
+
+[[package]]
 name = "grid"
 version = "0.1.0"
 

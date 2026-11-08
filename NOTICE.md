@@ -1,0 +1,16 @@
+# Notices
+
+This project is an independent Rust reimplementation of game mechanics. It contains
+no Java code, assets, models or textures from the mods below, but its logic is ported
+from their source code:
+
+- **Create** — https://github.com/Creators-of-Create/Create
+  Code: MIT License, Copyright (c) The Create Team / The Creators of Create.
+  Assets (`src/main/resources/assets/`): **All Rights Reserved** — do not copy them.
+  Ported from: `RotationPropagator`, `KineticNetwork`, gearbox / split shaft /
+  chain drive / speed controller block entities, `AllBlocks` stress defaults.
+
+- **Create: Power Grid** — https://github.com/patryk3211/PowerGrid
+  Apache License 2.0, Copyright 2025 patryk3211.
+  Ported from: `CapacitorWire`, `InductorWire`, `FuseSwitchWire` (companion models,
+  per-tick stepping), `ElectricMotorBlockEntity` and its config defaults.
