@@ -37,6 +37,7 @@ pub mod mod_api {
         fn destroy_block(&mut self, _pos: [i32; 3], _tool: Option<&ItemStack>, _collect: bool) -> Option<Vec<ItemStack>> { unimplemented!() }
         fn block_state_property(&self, _state: BlockStateId, _key: &str) -> Option<&str> { unimplemented!() }
         fn draw_model(&self, _draw: &mut BlockEntityDraw, _model: &str, _tint: u32) -> bool { unimplemented!() }
+        fn block_entity_sync(&mut self, _pos: [i32; 3]) { unimplemented!() }
         fn tell(&mut self, _uuid: u128, _line: Text) -> bool { unimplemented!() }
         fn instance_dir(&self) -> std::path::PathBuf { unimplemented!() }
         fn draw_text(&self, _draw: &mut BlockEntityDraw, _text: &Text, _at: [f32; 2], _color: u32, _glowing: bool, _outline: u32) -> f32 { unimplemented!() }

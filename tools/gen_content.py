@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "mod"
 NS = "horizon_create"
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 
 
 def write(rel, data):

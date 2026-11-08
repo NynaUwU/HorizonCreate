@@ -9,7 +9,7 @@ O mod tem duas metades com o mesmo id (`horizon_create`):
 
 ## 1. Preparar os arquivos
 
-**Atalho:** os arquivos prontos estão em [`releases/v0.2.3/`](../releases/v0.2.3/) (`.hmod` e `.hnmod`).
+**Atalho:** os arquivos prontos estão em [`releases/v0.2.4/`](../releases/v0.2.4/) (`.hmod` e `.hnmod`).
 Para gerar de novo depois de mudar algo:
 
 ```sh
@@ -24,7 +24,7 @@ python3 tools/package.py          # gera dist/horizon_create-<versão>.hmod e .h
 
 Na pasta do jogo (a que tem o `options.txt`):
 
-1. Copie **`horizon_create-0.2.3.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
+1. Copie **`horizon_create-0.2.4.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
 2. Abra o jogo → **Opções → Mods** → ligue **Horizon Create**.
 3. Como o mod adiciona blocos, o jogo pede para **reiniciar**. Reinicie.
 4. Se algo estiver errado, a linha do mod fica **vermelha** com o motivo.
@@ -41,7 +41,7 @@ cd mod && cargo horizon-mod run
 
 ## 3. Instalar o native mod
 
-1. Copie **`horizon_create-0.2.3.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
+1. Copie **`horizon_create-0.2.4.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
 2. O launcher mostra o aviso de confiança (mods nativos não rodam em sandbox) e **compila o jogo com o mod**.
    A primeira compilação demora bastante.
 

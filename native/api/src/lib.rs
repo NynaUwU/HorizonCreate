@@ -108,7 +108,7 @@ fn spinning_model(name: &str) -> Option<&'static str> {
 /// Shown in Options > Mods, so players can see the native half is in their build.
 /// Its own id: the content mod's row (`horizon_create`) keeps its switch.
 const NATIVE_ID: &str = "horizon_create_native";
-const VERSION: &str = "0.2.3";
+const VERSION: &str = "0.2.4";
 
 impl Hooks for Mod {
     /// Without the content mod nothing shows up and the game only logs missing models:
@@ -184,6 +184,9 @@ impl Hooks for Mod {
             for (key, tag) in readout_tags(&readout) {
                 entity.nbt.insert(key.into(), tag);
             }
+            // Changes made in a block entity's tick aren't sent on their own (as in vanilla):
+            // ask Horizon to send the update tag again, so clients see the new speed.
+            host.block_entity_sync(pos);
         }
 
         if name == "mechanical_drill" {
