@@ -27,9 +27,9 @@ def main():
         copy(f"kinetics/src/{f}", DST / "kinetics" / f)
     copy("kinetics/src/lib.rs", DST / "kinetics" / "mod.rs")
     rewrite = lambda s: s.replace("use kinetics::", "use super::kinetics::")
-    copy("hcglue/src/lib.rs", DST / "hcglue" / "mod.rs", rewrite)
-    copy("hcglue/src/drill.rs", DST / "hcglue" / "drill.rs", rewrite)
-    copy("hcglue/src/setup.rs", DST / "hcglue" / "setup.rs", rewrite)
+    for src in sorted((ROOT / "hcglue/src").glob("*.rs")):
+        dst = "mod.rs" if src.name == "lib.rs" else src.name
+        copy(f"hcglue/src/{src.name}", DST / "hcglue" / dst, rewrite)
     (DST / "mod.rs").write_text(HEADER.format(src="tools/sync_native.py")
                                 + "#![allow(dead_code, unused_imports)]\npub mod hcglue;\npub mod kinetics;\n")
     print(f"synced -> {DST.relative_to(ROOT)}")

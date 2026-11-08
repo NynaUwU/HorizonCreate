@@ -157,7 +157,7 @@ def main():
         for v in (load(p) or {})["values"]:
             if v not in ids:
                 err(f"tag {p.name}: unknown {v}")
-    for ref in (f"{NS}:block/shaft", f"{NS}:block/cogwheel", f"{NS}:block/large_cogwheel", f"{NS}:block/drill_head"):
+    for ref in (f"{NS}:block/shaft", f"{NS}:block/cogwheel", f"{NS}:block/large_cogwheel", f"{NS}:block/drill_head", f"{NS}:block/saw_blade"):
         check_model(ref, models_seen)
     tab = load(ROOT / f"data/{NS}/horizon/creative_tab/main.json") or {}
     for i in tab.get("items", []) + [tab.get("icon")]:

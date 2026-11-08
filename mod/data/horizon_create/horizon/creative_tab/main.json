@@ -17,6 +17,7 @@
     "horizon_create:creative_motor",
     "horizon_create:speedometer",
     "horizon_create:stressometer",
-    "horizon_create:mechanical_drill"
+    "horizon_create:mechanical_drill",
+    "horizon_create:mechanical_saw"
   ]
 }

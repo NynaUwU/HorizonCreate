@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " N ",
+    "NAN",
+    " C "
+  ],
+  "key": {
+    "N": "minecraft:iron_nugget",
+    "A": "horizon_create:andesite_alloy",
+    "C": "horizon_create:andesite_casing"
+  },
+  "result": {
+    "id": "horizon_create:mechanical_saw",
+    "count": 1
+  }
+}

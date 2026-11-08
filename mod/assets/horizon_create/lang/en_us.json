@@ -15,5 +15,6 @@
   "block.horizon_create.speedometer": "Speedometer",
   "block.horizon_create.stressometer": "Stressometer",
   "block.horizon_create.mechanical_drill": "Mechanical Drill",
+  "block.horizon_create.mechanical_saw": "Mechanical Saw",
   "item.horizon_create.andesite_alloy": "Andesite Alloy"
 }

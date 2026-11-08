@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "mod"
 NS = "horizon_create"
-VERSION = "0.2.4"
+VERSION = "0.3.0"
 
 
 def write(rel, data):
@@ -161,6 +161,22 @@ DRILL_HEAD = [
 DRILL_TEXTURES = {"particle": tex("andesite_casing"), "side": tex("andesite_casing"), "front": tex("drill_front"),
                   "back": tex("gearbox"), "bit": tex("drill_head")}
 
+# mechanical saw, pointing up: casing body + toothed blade (drawn turning)
+SAW_BODY = [{
+    "from": [0, 0, 0], "to": [16, 12, 16],
+    "faces": {d: face("#side", [0, 4, 16, 16]) for d in ("north", "south", "east", "west")}
+    | {"up": face("#front"), "down": face("#back", None, "down")},
+}]
+SAW_BLADE = [
+    box([2, 12, 2], [14, 13, 14], "#blade", "#blade"),
+    box([0, 12.25, 7], [16, 12.75, 9], "#blade", "#blade"),
+    box([7, 12.25, 0], [9, 12.75, 16], "#blade", "#blade"),
+    box([0, 12.25, 7], [16, 12.75, 9], "#blade", "#blade", rotation={"angle": 45, "axis": "y", "origin": [8, 8, 8]}),
+    box([7, 12.25, 0], [9, 12.75, 16], "#blade", "#blade", rotation={"angle": 45, "axis": "y", "origin": [8, 8, 8]}),
+]
+SAW_TEXTURES = {"particle": tex("andesite_casing"), "side": tex("andesite_casing"), "front": tex("saw_front"),
+                "back": tex("gearbox"), "blade": tex("saw_blade")}
+
 # blockstate rotations that take an up-pointing model to each facing (end rod / piston layout)
 FACING_ROT = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "south": {"x": 90, "y": 180},
               "west": {"x": 90, "y": 270}, "east": {"x": 90, "y": 90}}
@@ -293,10 +309,21 @@ BLOCKS = {
          "mechanical_drill_item": {"textures": DRILL_TEXTURES, "elements": DRILL_BODY + DRILL_HEAD}},
         "pickaxe", "Mechanical Drill", "Furadeira Mecânica",
     ),
+    "mechanical_saw": (
+        {"template": "minecraft:lightning_rod",
+         "properties": {"hardness": 2.0, "sounds": WOOD_SOUND, "random_ticks": False},
+         "shapes": {"default": [[0, 0, 0, 1, 1, 1]]}},
+        facing_variants(f"{NS}:block/mechanical_saw"),
+        {"mechanical_saw": {"textures": SAW_TEXTURES, "elements": SAW_BODY},
+         "saw_blade": {"textures": SAW_TEXTURES, "elements": SAW_BLADE},
+         "mechanical_saw_item": {"textures": SAW_TEXTURES, "elements": SAW_BODY + SAW_BLADE}},
+        "pickaxe", "Mechanical Saw", "Serra Mecânica",
+    ),
 }
 
 # blocks whose item shows another model than the block (the drill's bit is drawn by its block entity)
-ITEM_MODEL = {"mechanical_drill": f"{NS}:block/mechanical_drill_item"}
+ITEM_MODEL = {"mechanical_drill": f"{NS}:block/mechanical_drill_item",
+              "mechanical_saw": f"{NS}:block/mechanical_saw_item"}
 
 ITEMS = {
     "andesite_alloy": ({"template": "minecraft:iron_ingot"}, "Andesite Alloy", "Liga de Andesito"),
@@ -344,6 +371,8 @@ RECIPES = {
     "stressometer": shapeless([CASING, "minecraft:clock"], "stressometer"),
     "mechanical_drill": shaped([" I ", "IAI", " C "], {"I": "minecraft:iron_ingot", "A": A, "C": CASING},
                                "mechanical_drill"),
+    "mechanical_saw": shaped([" N ", "NAN", " C "], {"N": "minecraft:iron_nugget", "A": A, "C": CASING},
+                             "mechanical_saw"),
 }
 
 

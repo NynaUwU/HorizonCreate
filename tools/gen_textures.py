@@ -293,6 +293,28 @@ def drill_front(x, y):
     return c
 
 
+def saw_blade(x, y):
+    """Steel disc: brighter rim, darker hub ring, scratches running round it."""
+    d = ((x - 7.5) ** 2 + (y - 7.5) ** 2) ** 0.5
+    v = 0.95 + 0.06 * noise(x, y, 61)
+    if d > 6.3:
+        v *= 1.12  # sharpened rim
+    elif 2.0 < d < 3.0:
+        v *= 0.7  # hub ring
+    elif int(d * 2) % 3 == 0:
+        v *= 0.9  # circular scratches
+    return shade(IRON, v)
+
+
+def saw_front(x, y):
+    c = andesite_casing(x, y)
+    if 3 <= x <= 12 and 6 <= y <= 9:  # the slot the blade comes out of
+        c = shade(BLACK, 1.0 + 0.2 * noise(x, y, 62))
+        if y in (6, 9):
+            c = shade(IRON_DARK, 0.8)
+    return c
+
+
 def crank_handle(x, y):
     return planks(x, y, WOOD_DARK, seed=31, vertical=True)
 
@@ -340,6 +362,8 @@ BLOCK = {
     "crank_handle": crank_handle,
     "drill_head": drill_head,
     "drill_front": drill_front,
+    "saw_blade": saw_blade,
+    "saw_front": saw_front,
 }
 ITEM = {"andesite_alloy": andesite_alloy}
 

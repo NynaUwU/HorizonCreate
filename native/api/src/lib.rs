@@ -15,6 +15,7 @@
 mod engine;
 
 use engine::hcglue::drill::{self, DrillAction, DrillState};
+use engine::hcglue::saw;
 use engine::hcglue::setup;
 use engine::hcglue::{self, Engine, Readout, Spinner};
 use engine::kinetics::Axis;
@@ -42,6 +43,28 @@ struct Mod {
 
 const KEYS: [&str; 4] = ["rpm", "impact", "capacity", "status"];
 const DRILL_HEAD: &str = "horizon_create:block/drill_head";
+const SAW_BLADE: &str = "horizon_create:block/saw_blade";
+
+/// The part a machine turns in front of it (drawn pointing up, turned to its facing).
+fn front_tool(name: &str) -> Option<&'static str> {
+    match name {
+        "mechanical_drill" => Some(DRILL_HEAD),
+        "mechanical_saw" => Some(SAW_BLADE),
+        _ => None,
+    }
+}
+
+/// What the saw's tree search reads of the world.
+struct HostWorld<'a>(&'a dyn Host);
+
+impl saw::World for HostWorld<'_> {
+    fn block(&self, pos: [i32; 3]) -> String {
+        self.0.block(pos)
+    }
+    fn leaf_distance(&self, pos: [i32; 3]) -> Option<i32> {
+        self.0.block_property(pos, "distance")?.parse().ok()
+    }
+}
 
 fn read<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
     nbt.iter().find(|(k, _)| k.0.iter().copied().eq(key.encode_utf16())).map(|(_, v)| v)
@@ -108,7 +131,7 @@ fn spinning_model(name: &str) -> Option<&'static str> {
 /// Shown in Options > Mods, so players can see the native half is in their build.
 /// Its own id: the content mod's row (`horizon_create`) keeps its switch.
 const NATIVE_ID: &str = "horizon_create_native";
-const VERSION: &str = "0.2.4";
+const VERSION: &str = "0.3.0";
 
 impl Hooks for Mod {
     /// Without the content mod nothing shows up and the game only logs missing models:
@@ -136,6 +159,7 @@ impl Hooks for Mod {
             event.models.push((*model).to_string());
         }
         event.models.push(DRILL_HEAD.to_string());
+        event.models.push(SAW_BLADE.to_string());
     }
 
     // "replace" hook: return the block entity (id, saved compound) for our blocks
@@ -189,12 +213,21 @@ impl Hooks for Mod {
             host.block_entity_sync(pos);
         }
 
-        if name == "mechanical_drill" {
+        if matches!(name, "mechanical_drill" | "mechanical_saw") {
             let Some((off, _)) = host.block_property(pos, "facing").as_deref().and_then(facing_offset) else {
                 return;
             };
+            // a saw only cuts sideways (`SawBlockEntity.shouldRun`)
+            if name == "mechanical_saw" && off[1] != 0 {
+                return;
+            }
             let target = [pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]];
-            let hardness = drill::hardness(&host.block(target));
+            let target_id = host.block(target);
+            let hardness = if name == "mechanical_saw" && !saw::is_sawable(&target_id) {
+                None
+            } else {
+                drill::hardness(&target_id)
+            };
             let mut state = drill_state_of(&entity.nbt);
             let before = state;
             let breaker = drill::breaker_id(pos);
@@ -205,6 +238,13 @@ impl Hooks for Mod {
                 DrillAction::Break => {
                     host.set_break_progress(breaker, target, -1);
                     host.destroy_block(target, None, false);
+                    if name == "mechanical_saw" {
+                        // the rest of the tree falls with the cut (`TreeCutter.findTree`)
+                        let fallen = saw::find_tree(target, &target_id, &HostWorld(&*host));
+                        for p in fallen {
+                            host.destroy_block(p, None, false);
+                        }
+                    }
                 }
             }
             if state != before {
@@ -266,14 +306,14 @@ impl Hooks for Mod {
             draw.pop();
         }
 
-        if name == "mechanical_drill" {
+        if let Some(tool) = front_tool(name) {
             let facing = host.block_state_property(event.state, "facing").map(|f| f.to_string());
             if let Some((_, dir)) = facing.as_deref().and_then(facing_offset) {
                 let spin = self.spinners.lock().unwrap().entry(event.pos).or_default().update(readout.rpm, draw.game_time);
                 let centre = [0.5, 0.5, 0.5];
                 draw.push();
                 draw.spin(dir, centre, spin.degrees_per_tick, spin.phase);
-                // the bit model points up: turn it to the drill's facing
+                // the tool model points up: turn it to the machine's facing
                 match facing.as_deref() {
                     Some("down") => draw.rotate_about([1.0, 0.0, 0.0], 180.0, centre),
                     Some("north") => draw.rotate_about([1.0, 0.0, 0.0], -90.0, centre),
@@ -282,7 +322,7 @@ impl Hooks for Mod {
                     Some("west") => draw.rotate_about([0.0, 0.0, 1.0], 90.0, centre),
                     _ => {}
                 }
-                host.draw_model(draw, DRILL_HEAD, 0xFFFFFF);
+                host.draw_model(draw, tool, 0xFFFFFF);
                 draw.still();
                 draw.pop();
             }

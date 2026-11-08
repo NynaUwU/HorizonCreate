@@ -15,5 +15,6 @@
   "block.horizon_create.speedometer": "Veloc\u00edmetro",
   "block.horizon_create.stressometer": "Medidor de Stress",
   "block.horizon_create.mechanical_drill": "Furadeira Mec\u00e2nica",
+  "block.horizon_create.mechanical_saw": "Serra Mec\u00e2nica",
   "item.horizon_create.andesite_alloy": "Liga de Andesito"
 }

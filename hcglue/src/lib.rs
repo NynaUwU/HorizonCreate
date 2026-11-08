@@ -15,6 +15,7 @@
 //! arguments without the part jumping when the speed changes.
 
 pub mod drill;
+pub mod saw;
 pub mod setup;
 
 use kinetics::presets::{capacity, impact};
@@ -39,6 +40,7 @@ pub const KINETIC_BLOCKS: &[&str] = &[
     "speedometer",
     "stressometer",
     "mechanical_drill",
+    "mechanical_saw",
 ];
 
 /// Blocks drawn turning by the block entity (their block model is left out:
@@ -116,15 +118,7 @@ pub fn block_from_state(
         }
         // lightning rod template: `facing` is the side it drills
         "mechanical_drill" => {
-            let (axis, positive) = match prop("facing").as_deref()? {
-                "east" => (Axis::X, true),
-                "west" => (Axis::X, false),
-                "up" => (Axis::Y, true),
-                "down" => (Axis::Y, false),
-                "south" => (Axis::Z, true),
-                "north" => (Axis::Z, false),
-                _ => return None,
-            };
+            let (axis, positive) = facing(&prop("facing")?)?;
             KineticBlock::passive(
                 BlockKind::Machine {
                     facing_positive: positive,
@@ -134,6 +128,26 @@ pub fn block_from_state(
             .with_role(NodeRole::Consumer {
                 impact: impact::MECHANICAL_DRILL,
             })
+        }
+        // Create 6: a saw facing sideways takes its shaft at the back, like the drill;
+        // one facing up or down (item processing) has it across, along Z
+        // (`DirectionalAxisKineticBlock` with AXIS_ALONG_FIRST_COORDINATE false).
+        "mechanical_saw" => {
+            let (axis, positive) = facing(&prop("facing")?)?;
+            let consumer = NodeRole::Consumer {
+                impact: impact::MECHANICAL_SAW,
+            };
+            if axis == Axis::Y {
+                KineticBlock::passive(BlockKind::Shaft, Axis::Z).with_role(consumer)
+            } else {
+                KineticBlock::passive(
+                    BlockKind::Machine {
+                        facing_positive: positive,
+                    },
+                    axis,
+                )
+                .with_role(consumer)
+            }
         }
         "rotation_speed_controller" => KineticBlock::passive(
             BlockKind::SpeedController {
@@ -166,6 +180,19 @@ pub fn block_from_state(
         _ => return None,
     };
     Some(b)
+}
+
+/// A `facing` property value: its axis and whether it points the positive way.
+pub fn facing(value: &str) -> Option<(Axis, bool)> {
+    Some(match value {
+        "east" => (Axis::X, true),
+        "west" => (Axis::X, false),
+        "up" => (Axis::Y, true),
+        "down" => (Axis::Y, false),
+        "south" => (Axis::Z, true),
+        "north" => (Axis::Z, false),
+        _ => return None,
+    })
 }
 
 fn default_connection(axis: Axis) -> Axis {
@@ -456,6 +483,25 @@ mod tests {
         let r = e.readout([1, 0, 0]);
         assert_eq!(r.rpm, 16.0);
         assert_eq!(r.impact, 64.0); // 4 SU/RPM at 16 RPM
+    }
+
+    #[test]
+    fn saw_takes_its_shaft_at_the_back_when_sideways() {
+        let x: Props = &[("axis", "x")];
+        let east: Props = &[("facing", "east")];
+        let mut e = Engine::new();
+        tick(
+            &mut e,
+            &[
+                ([0, 0, 0], "horizon_create:creative_motor", x, 0),
+                ([1, 0, 0], "horizon_create:mechanical_saw", east, 0),
+            ],
+        );
+        e.begin_level(OW);
+        assert_eq!(e.readout([1, 0, 0]).rpm, 16.0);
+        let up: Props = &[("facing", "up")];
+        let b = block_from_state("horizon_create:mechanical_saw", &props(up), 0).unwrap();
+        assert_eq!((b.kind, b.axis), (BlockKind::Shaft, Axis::Z));
     }
 
     #[test]
