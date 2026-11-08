@@ -42,14 +42,17 @@ def native_allowed(rest):
 
 
 def zip_files(out, files):
+    """Reproducible zip: fixed timestamps and permissions, so the same sources give
+    the same bytes (and the same SHA-256 the registry and servers compare)."""
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for arc, src in files:
             if not safe(arc):
                 fail(f"bad path {arc}")
-            if isinstance(src, bytes):
-                z.writestr(arc, src)
-            else:
-                z.write(src, arc)
+            data = src if isinstance(src, bytes) else Path(src).read_bytes()
+            info = zipfile.ZipInfo(arc, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            z.writestr(info, data)
 
 
 def main():
