@@ -22,6 +22,8 @@
 //!
 //! See `tests/motor_loop.rs` for the whole loop.
 
+pub mod generator;
+
 use kinetics::NodeRole;
 
 /// `ElectricMotorBlockEntity.AVERAGING_TICKS`.
