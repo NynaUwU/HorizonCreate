@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:andesite_casing",
+    "horizon_create:cogwheel",
+    "minecraft:gold_ingot",
+    "minecraft:comparator"
+  ],
+  "result": {
+    "id": "horizon_create:rotation_speed_controller",
+    "count": 1
+  }
+}

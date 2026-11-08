@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "axis=y,powered=false": {
+      "model": "horizon_create:block/clutch"
+    },
+    "axis=y,powered=true": {
+      "model": "horizon_create:block/clutch_on"
+    },
+    "axis=x,powered=false": {
+      "model": "horizon_create:block/clutch",
+      "x": 90,
+      "y": 90
+    },
+    "axis=x,powered=true": {
+      "model": "horizon_create:block/clutch_on",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,powered=false": {
+      "model": "horizon_create:block/clutch",
+      "x": 90
+    },
+    "axis=z,powered=true": {
+      "model": "horizon_create:block/clutch_on",
+      "x": 90
+    }
+  }
+}

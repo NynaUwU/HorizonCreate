@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "horizon_create:block/shaft"
+    },
+    "axis=x": {
+      "model": "horizon_create:block/shaft",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z": {
+      "model": "horizon_create:block/shaft",
+      "x": 90
+    }
+  }
+}

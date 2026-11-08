@@ -1,0 +1,12 @@
+{
+  "template": "minecraft:quartz_pillar",
+  "properties": {
+    "hardness": 2.0,
+    "sounds": "minecraft:oak_planks"
+  },
+  "state_properties": {
+    "powered": {
+      "type": "boolean"
+    }
+  }
+}

@@ -17,7 +17,7 @@
 //! Sign convention: speed is measured around the block's positive axis, like Create.
 //! Split shafts (clutch, gearshift) are two nodes: one per half.
 
-use crate::network::{Network, NodeId, NodeRole, Solution, Status};
+use super::network::{Network, NodeId, NodeRole, Solution, Status};
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -56,15 +56,24 @@ impl Dir {
     }
 
     pub fn all() -> impl Iterator<Item = Dir> {
-        Axis::ALL.into_iter().flat_map(|a| [Dir::new(a, false), Dir::new(a, true)])
+        Axis::ALL
+            .into_iter()
+            .flat_map(|a| [Dir::new(a, false), Dir::new(a, true)])
     }
 
     pub fn opposite(self) -> Self {
-        Self { positive: !self.positive, ..self }
+        Self {
+            positive: !self.positive,
+            ..self
+        }
     }
 
     pub fn sign(self) -> f32 {
-        if self.positive { 1.0 } else { -1.0 }
+        if self.positive {
+            1.0
+        } else {
+            -1.0
+        }
     }
 
     pub fn offset(self) -> Pos {
@@ -129,19 +138,30 @@ pub enum BlockKind {
     /// rotation is reversed, like Create's gearbox.
     Gearbox,
     /// Split shaft. When `powered` the two halves are disconnected.
-    Clutch { powered: bool },
+    Clutch {
+        powered: bool,
+    },
     /// Split shaft. When `powered` the second half spins in reverse.
-    Gearshift { powered: bool },
+    Gearshift {
+        powered: bool,
+    },
     /// Encased chain drive (formerly encased belt). Links to neighbouring chain
     /// drives along `connection`, which must be perpendicular to the block's axis.
-    ChainDrive { connection: Axis },
+    ChainDrive {
+        connection: Axis,
+    },
     /// Adjustable chain gearshift: like [`BlockKind::ChainDrive`], but speeds up
     /// what it drives through the chain by `1 + (signal + 1) / 16` when powered.
-    ChainGearshift { connection: Axis, signal: u8 },
+    ChainGearshift {
+        connection: Axis,
+        signal: u8,
+    },
     /// Rotation speed controller. Input shaft along its (horizontal) `axis`; drives a
     /// large cogwheel directly above it (cog axis horizontal and != controller axis)
     /// at `target` RPM. Create clamps `target` to ±maxRotationSpeed.
-    SpeedController { target: i32 },
+    SpeedController {
+        target: i32,
+    },
 }
 
 impl BlockKind {
@@ -154,7 +174,10 @@ impl BlockKind {
     }
 
     fn is_chain(self) -> bool {
-        matches!(self, BlockKind::ChainDrive { .. } | BlockKind::ChainGearshift { .. })
+        matches!(
+            self,
+            BlockKind::ChainDrive { .. } | BlockKind::ChainGearshift { .. }
+        )
     }
 
     fn chain_connection(self) -> Option<Axis> {
@@ -169,7 +192,9 @@ impl BlockKind {
     /// `ChainGearshiftBlockEntity.getModifierForSignal`.
     fn chain_modifier(self) -> f32 {
         match self {
-            BlockKind::ChainGearshift { signal, .. } if signal > 0 => 1.0 + (signal as f32 + 1.0) / 16.0,
+            BlockKind::ChainGearshift { signal, .. } if signal > 0 => {
+                1.0 + (signal as f32 + 1.0) / 16.0
+            }
             _ => 1.0,
         }
     }
@@ -187,7 +212,11 @@ pub struct KineticBlock {
 
 impl KineticBlock {
     pub fn passive(kind: BlockKind, axis: Axis) -> Self {
-        Self { kind, axis, role: NodeRole::Passive }
+        Self {
+            kind,
+            axis,
+            role: NodeRole::Passive,
+        }
     }
 
     pub fn with_role(mut self, role: NodeRole) -> Self {
@@ -239,7 +268,11 @@ pub fn connection(a: &KineticBlock, pa: Pos, b: &KineticBlock, pb: Pos) -> Optio
     if let Some(dir) = Dir::from_offset(d) {
         // Axle <-> axle.
         if let (Some((la, sa)), Some((lb, sb))) = (a.port(dir), b.port(dir.opposite())) {
-            return Some(Link { la, lb, ratio: sa / sb });
+            return Some(Link {
+                la,
+                lb,
+                ratio: sa / sb,
+            });
         }
         // Encased chain drives.
         if a.kind.is_chain() && b.kind.is_chain() {
@@ -257,7 +290,11 @@ pub fn connection(a: &KineticBlock, pa: Pos, b: &KineticBlock, pb: Pos) -> Optio
     }
 
     let ratio = gear_ratio(a, b, d)?;
-    Some(Link { la: 0, lb: 0, ratio })
+    Some(Link {
+        la: 0,
+        lb: 0,
+        ratio,
+    })
 }
 
 fn gear_ratio(a: &KineticBlock, b: &KineticBlock, d: Pos) -> Option<f32> {
@@ -278,7 +315,8 @@ fn gear_ratio(a: &KineticBlock, b: &KineticBlock, d: Pos) -> Option<f32> {
     if a.axis != b.axis || a.axis.pick(d) != 0 {
         return None;
     }
-    let in_plane_diagonal = d.manhattan() == 2 && d.x.abs() <= 1 && d.y.abs() <= 1 && d.z.abs() <= 1;
+    let in_plane_diagonal =
+        d.manhattan() == 2 && d.x.abs() <= 1 && d.y.abs() <= 1 && d.z.abs() <= 1;
 
     match (a.kind, b.kind) {
         (Cogwheel, Cogwheel) if d.manhattan() == 1 => Some(-1.0),
@@ -299,7 +337,8 @@ fn third_axis(a: Axis, b: Axis) -> Axis {
 
 /// Neighbour offsets worth checking: everything within a 3x3x3 cube.
 fn offsets() -> impl Iterator<Item = Pos> {
-    (-1..=1).flat_map(|x| (-1..=1).flat_map(move |y| (-1..=1).map(move |z| Pos::new(x, y, z))))
+    (-1..=1)
+        .flat_map(|x| (-1..=1).flat_map(move |y| (-1..=1).map(move |z| Pos::new(x, y, z))))
         .filter(|p| *p != Pos::new(0, 0, 0))
 }
 
@@ -356,7 +395,11 @@ pub struct KineticWorld {
 
 impl Default for KineticWorld {
     fn default() -> Self {
-        Self { blocks: BTreeMap::new(), belts: Vec::new(), max_rpm: crate::network::MAX_RPM }
+        Self {
+            blocks: BTreeMap::new(),
+            belts: Vec::new(),
+            max_rpm: super::network::MAX_RPM,
+        }
     }
 }
 
@@ -400,7 +443,11 @@ impl KineticWorld {
         let bb = self.blocks.get(&b).ok_or(BeltError::MissingBlock(b))?;
         let d = b - a;
         let shaftish = |k: BlockKind| matches!(k, BlockKind::Shaft);
-        if !shaftish(ba.kind) || !shaftish(bb.kind) || ba.axis != bb.axis || ba.axis.pick(d) != 0 || d == Pos::new(0, 0, 0)
+        if !shaftish(ba.kind)
+            || !shaftish(bb.kind)
+            || ba.axis != bb.axis
+            || ba.axis.pick(d) != 0
+            || d == Pos::new(0, 0, 0)
         {
             return Err(BeltError::BadGeometry);
         }
@@ -478,7 +525,14 @@ mod tests {
     const P0: Pos = Pos::new(0, 0, 0);
 
     fn motor(axis: Axis, rpm: f32) -> KineticBlock {
-        KineticBlock { kind: Shaft, axis, role: NodeRole::Source { rpm, capacity: 16.0 } }
+        KineticBlock {
+            kind: Shaft,
+            axis,
+            role: NodeRole::Source {
+                rpm,
+                capacity: 16.0,
+            },
+        }
     }
 
     #[test]
@@ -507,7 +561,13 @@ mod tests {
     #[test]
     fn small_cogs_reverse_direction() {
         let mut w = KineticWorld::new();
-        w.place(P0, KineticBlock { kind: Cogwheel, ..motor(Axis::Z, 16.0) });
+        w.place(
+            P0,
+            KineticBlock {
+                kind: Cogwheel,
+                ..motor(Axis::Z, 16.0)
+            },
+        );
         w.place(Pos::new(1, 0, 0), KineticBlock::passive(Cogwheel, Axis::Z));
         w.place(Pos::new(1, 1, 0), KineticBlock::passive(Cogwheel, Axis::Z));
         let s = w.solve();
@@ -518,7 +578,13 @@ mod tests {
     #[test]
     fn large_to_small_doubles_speed() {
         let mut w = KineticWorld::new();
-        w.place(P0, KineticBlock { kind: LargeCogwheel, ..motor(Axis::Y, 32.0) });
+        w.place(
+            P0,
+            KineticBlock {
+                kind: LargeCogwheel,
+                ..motor(Axis::Y, 32.0)
+            },
+        );
         w.place(Pos::new(1, 0, 1), KineticBlock::passive(Cogwheel, Axis::Y));
         let s = w.solve();
         assert_eq!(s.speed_at(Pos::new(1, 0, 1)), Some(-64.0));
@@ -527,17 +593,38 @@ mod tests {
     #[test]
     fn small_to_large_halves_speed() {
         let mut w = KineticWorld::new();
-        w.place(P0, KineticBlock { kind: Cogwheel, ..motor(Axis::Y, 32.0) });
-        w.place(Pos::new(-1, 0, 1), KineticBlock::passive(LargeCogwheel, Axis::Y));
+        w.place(
+            P0,
+            KineticBlock {
+                kind: Cogwheel,
+                ..motor(Axis::Y, 32.0)
+            },
+        );
+        w.place(
+            Pos::new(-1, 0, 1),
+            KineticBlock::passive(LargeCogwheel, Axis::Y),
+        );
         assert_eq!(w.solve().speed_at(Pos::new(-1, 0, 1)), Some(-16.0));
     }
 
     #[test]
     fn large_cogs_at_right_angle() {
         let mut w = KineticWorld::new();
-        w.place(P0, KineticBlock { kind: LargeCogwheel, ..motor(Axis::X, 32.0) });
-        w.place(Pos::new(1, 1, 0), KineticBlock::passive(LargeCogwheel, Axis::Y));
-        w.place(Pos::new(1, -1, 0), KineticBlock::passive(LargeCogwheel, Axis::Y));
+        w.place(
+            P0,
+            KineticBlock {
+                kind: LargeCogwheel,
+                ..motor(Axis::X, 32.0)
+            },
+        );
+        w.place(
+            Pos::new(1, 1, 0),
+            KineticBlock::passive(LargeCogwheel, Axis::Y),
+        );
+        w.place(
+            Pos::new(1, -1, 0),
+            KineticBlock::passive(LargeCogwheel, Axis::Y),
+        );
         let s = w.solve();
         assert_eq!(s.speed_at(Pos::new(1, 1, 0)), Some(32.0));
         assert_eq!(s.speed_at(Pos::new(1, -1, 0)), Some(-32.0));
@@ -559,22 +646,37 @@ mod tests {
         // motor 16 RPM * 16 SU/RPM = 256 SU; small cog spins at 32 RPM;
         // a consumer of 8 SU/RPM at 32 RPM = 256 SU -> exactly fits.
         let mut w = KineticWorld::new();
-        w.place(P0, KineticBlock { kind: LargeCogwheel, ..motor(Axis::Y, 16.0) });
+        w.place(
+            P0,
+            KineticBlock {
+                kind: LargeCogwheel,
+                ..motor(Axis::Y, 16.0)
+            },
+        );
         let machine_axle = Pos::new(1, 0, 1);
-        w.place(machine_axle, KineticBlock {
-            kind: Cogwheel,
-            axis: Axis::Y,
-            role: NodeRole::Consumer { impact: 8.0 },
-        });
+        w.place(
+            machine_axle,
+            KineticBlock {
+                kind: Cogwheel,
+                axis: Axis::Y,
+                role: NodeRole::Consumer { impact: 8.0 },
+            },
+        );
         assert_eq!(w.solve().status_at(machine_axle), Some(&Status::Running));
 
         // add a second identical machine on the same network -> overstressed
-        w.place(Pos::new(1, 1, 1), KineticBlock {
-            kind: Shaft,
-            axis: Axis::Y,
-            role: NodeRole::Consumer { impact: 8.0 },
-        });
-        assert_eq!(w.solve().status_at(machine_axle), Some(&Status::Overstressed));
+        w.place(
+            Pos::new(1, 1, 1),
+            KineticBlock {
+                kind: Shaft,
+                axis: Axis::Y,
+                role: NodeRole::Consumer { impact: 8.0 },
+            },
+        );
+        assert_eq!(
+            w.solve().status_at(machine_axle),
+            Some(&Status::Overstressed)
+        );
     }
 
     fn shaft(axis: Axis) -> KineticBlock {
@@ -619,7 +721,10 @@ mod tests {
         let mut w = KineticWorld::new();
         let out = Pos::new(2, 0, 0);
         w.place(P0, motor(Axis::X, 32.0));
-        w.place(Pos::new(1, 0, 0), KineticBlock::passive(Clutch { powered: false }, Axis::X));
+        w.place(
+            Pos::new(1, 0, 0),
+            KineticBlock::passive(Clutch { powered: false }, Axis::X),
+        );
         w.place(out, shaft(Axis::X));
         assert_eq!(w.solve().speed_at(out), Some(32.0));
 
@@ -628,15 +733,24 @@ mod tests {
         assert_eq!(s.speed_at(out), Some(0.0));
         assert_eq!(s.status_at(out), Some(&Status::Stopped));
         // the driven half still turns
-        assert_eq!(s.face_speed(Pos::new(1, 0, 0), Dir::new(Axis::X, false)), Some(32.0));
-        assert_eq!(s.face_speed(Pos::new(1, 0, 0), Dir::new(Axis::X, true)), Some(0.0));
+        assert_eq!(
+            s.face_speed(Pos::new(1, 0, 0), Dir::new(Axis::X, false)),
+            Some(32.0)
+        );
+        assert_eq!(
+            s.face_speed(Pos::new(1, 0, 0), Dir::new(Axis::X, true)),
+            Some(0.0)
+        );
     }
 
     #[test]
     fn powered_clutch_works_from_either_side() {
         let mut w = KineticWorld::new();
         w.place(P0, shaft(Axis::X));
-        w.place(Pos::new(1, 0, 0), KineticBlock::passive(Clutch { powered: true }, Axis::X));
+        w.place(
+            Pos::new(1, 0, 0),
+            KineticBlock::passive(Clutch { powered: true }, Axis::X),
+        );
         w.place(Pos::new(2, 0, 0), motor(Axis::X, 8.0));
         let s = w.solve();
         assert_eq!(s.speed_at(P0), Some(0.0));
@@ -648,7 +762,10 @@ mod tests {
         let mut w = KineticWorld::new();
         let out = Pos::new(2, 0, 0);
         w.place(P0, motor(Axis::X, 32.0));
-        w.place(Pos::new(1, 0, 0), KineticBlock::passive(Gearshift { powered: false }, Axis::X));
+        w.place(
+            Pos::new(1, 0, 0),
+            KineticBlock::passive(Gearshift { powered: false }, Axis::X),
+        );
         w.place(out, shaft(Axis::X));
         assert_eq!(w.solve().speed_at(out), Some(32.0));
         w.get_mut(Pos::new(1, 0, 0)).unwrap().kind = Gearshift { powered: true };
@@ -659,14 +776,46 @@ mod tests {
     fn chain_drives_relay_sideways() {
         // three X-axis chain drives stacked along Y; the last drives a shaft on X
         let mut w = KineticWorld::new();
-        let chain = |signal| KineticBlock::passive(ChainGearshift { connection: Axis::Y, signal }, Axis::X);
+        let chain = |signal| {
+            KineticBlock::passive(
+                ChainGearshift {
+                    connection: Axis::Y,
+                    signal,
+                },
+                Axis::X,
+            )
+        };
         w.place(Pos::new(-1, 0, 0), motor(Axis::X, 16.0));
-        w.place(P0, KineticBlock::passive(ChainDrive { connection: Axis::Y }, Axis::X));
+        w.place(
+            P0,
+            KineticBlock::passive(
+                ChainDrive {
+                    connection: Axis::Y,
+                },
+                Axis::X,
+            ),
+        );
         w.place(Pos::new(0, 1, 0), chain(0));
-        w.place(Pos::new(0, 2, 0), KineticBlock::passive(ChainDrive { connection: Axis::Y }, Axis::X));
+        w.place(
+            Pos::new(0, 2, 0),
+            KineticBlock::passive(
+                ChainDrive {
+                    connection: Axis::Y,
+                },
+                Axis::X,
+            ),
+        );
         w.place(Pos::new(1, 2, 0), shaft(Axis::X));
         // wrong connection axis: not linked
-        w.place(Pos::new(0, -1, 0), KineticBlock::passive(ChainDrive { connection: Axis::Z }, Axis::X));
+        w.place(
+            Pos::new(0, -1, 0),
+            KineticBlock::passive(
+                ChainDrive {
+                    connection: Axis::Z,
+                },
+                Axis::X,
+            ),
+        );
         let s = w.solve();
         assert_eq!(s.speed_at(Pos::new(1, 2, 0)), Some(16.0));
         assert_eq!(s.speed_at(Pos::new(0, -1, 0)), Some(0.0));
@@ -680,9 +829,30 @@ mod tests {
 
     #[test]
     fn chain_gearshift_modifier_matches_create() {
-        assert_eq!(BlockKind::ChainGearshift { connection: Axis::Y, signal: 0 }.chain_modifier(), 1.0);
-        assert_eq!(BlockKind::ChainGearshift { connection: Axis::Y, signal: 7 }.chain_modifier(), 1.5);
-        assert_eq!(BlockKind::ChainGearshift { connection: Axis::Y, signal: 15 }.chain_modifier(), 2.0);
+        assert_eq!(
+            BlockKind::ChainGearshift {
+                connection: Axis::Y,
+                signal: 0
+            }
+            .chain_modifier(),
+            1.0
+        );
+        assert_eq!(
+            BlockKind::ChainGearshift {
+                connection: Axis::Y,
+                signal: 7
+            }
+            .chain_modifier(),
+            1.5
+        );
+        assert_eq!(
+            BlockKind::ChainGearshift {
+                connection: Axis::Y,
+                signal: 15
+            }
+            .chain_modifier(),
+            2.0
+        );
     }
 
     #[test]
@@ -694,8 +864,14 @@ mod tests {
         assert_eq!(w.solve().speed_at(Pos::new(5, 1, 0)), Some(24.0));
 
         w.place(Pos::new(0, 3, 0), shaft(Axis::X));
-        assert_eq!(w.link_belt(P0, Pos::new(0, 3, 0)), Err(BeltError::BadGeometry));
-        assert_eq!(w.link_belt(P0, Pos::new(9, 9, 9)), Err(BeltError::MissingBlock(Pos::new(9, 9, 9))));
+        assert_eq!(
+            w.link_belt(P0, Pos::new(0, 3, 0)),
+            Err(BeltError::BadGeometry)
+        );
+        assert_eq!(
+            w.link_belt(P0, Pos::new(9, 9, 9)),
+            Err(BeltError::MissingBlock(Pos::new(9, 9, 9)))
+        );
 
         w.remove(P0);
         w.place(P0, shaft(Axis::Z));
@@ -708,7 +884,10 @@ mod tests {
         let ctrl = Pos::new(1, 0, 0);
         let cog = Pos::new(1, 1, 0);
         w.place(P0, motor(Axis::X, 16.0));
-        w.place(ctrl, KineticBlock::passive(SpeedController { target: 200 }, Axis::X));
+        w.place(
+            ctrl,
+            KineticBlock::passive(SpeedController { target: 200 }, Axis::X),
+        );
         w.place(cog, KineticBlock::passive(LargeCogwheel, Axis::Z));
         w.place(Pos::new(2, 2, 0), KineticBlock::passive(Cogwheel, Axis::Z));
         // 200 RPM on the large cog = 400 RPM on the small one -> the whole network breaks
@@ -731,8 +910,10 @@ mod tests {
     fn stress_is_reported_per_block() {
         let mut w = KineticWorld::new();
         w.place(P0, motor(Axis::X, 16.0));
-        w.place(Pos::new(1, 0, 0), shaft(Axis::X).with_role(NodeRole::Consumer { impact: 4.0 }));
+        w.place(
+            Pos::new(1, 0, 0),
+            shaft(Axis::X).with_role(NodeRole::Consumer { impact: 4.0 }),
+        );
         assert_eq!(w.solve().stress_at(Pos::new(1, 0, 0)), Some((64.0, 256.0)));
     }
 }
-

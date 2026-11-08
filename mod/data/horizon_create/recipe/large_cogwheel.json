@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:shaft",
+    "#minecraft:planks",
+    "#minecraft:planks"
+  ],
+  "result": {
+    "id": "horizon_create:large_cogwheel",
+    "count": 1
+  }
+}

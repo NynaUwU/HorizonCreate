@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "side": "horizon_create:block/stressometer_face",
+    "end": "horizon_create:block/gearbox",
+    "particle": "horizon_create:block/stressometer_face"
+  }
+}

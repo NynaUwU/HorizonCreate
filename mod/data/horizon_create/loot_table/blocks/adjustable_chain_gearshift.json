@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "horizon_create:adjustable_chain_gearshift"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "horizon_create:blocks/adjustable_chain_gearshift"
+}

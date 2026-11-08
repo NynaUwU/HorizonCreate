@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "horizon_create:block/large_cogwheel"
+    },
+    "axis=x": {
+      "model": "horizon_create:block/large_cogwheel",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z": {
+      "model": "horizon_create:block/large_cogwheel",
+      "x": 90
+    }
+  }
+}

@@ -15,5 +15,12 @@ name = "grid"
 version = "0.1.0"
 
 [[package]]
+name = "hcglue"
+version = "0.1.0"
+dependencies = [
+ "kinetics",
+]
+
+[[package]]
 name = "kinetics"
 version = "0.1.0"

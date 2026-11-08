@@ -1,0 +1,175 @@
+{
+  "textures": {
+    "particle": "horizon_create:block/crank_handle",
+    "axis": "horizon_create:block/axis",
+    "axis_end": "horizon_create:block/axis_end",
+    "hub": "horizon_create:block/cog_hub",
+    "handle": "horizon_create:block/crank_handle"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        0,
+        4
+      ],
+      "to": [
+        12,
+        2,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#hub"
+        },
+        "south": {
+          "texture": "#hub"
+        },
+        "east": {
+          "texture": "#hub"
+        },
+        "west": {
+          "texture": "#hub"
+        },
+        "up": {
+          "texture": "#hub"
+        },
+        "down": {
+          "texture": "#hub"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        2,
+        7
+      ],
+      "to": [
+        9,
+        9,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#axis",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        },
+        "south": {
+          "texture": "#axis",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        },
+        "east": {
+          "texture": "#axis",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        },
+        "west": {
+          "texture": "#axis",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        },
+        "up": {
+          "texture": "#axis_end",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        },
+        "down": {
+          "texture": "#axis_end",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        9,
+        2
+      ],
+      "to": [
+        9,
+        11,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#handle"
+        },
+        "south": {
+          "texture": "#handle"
+        },
+        "east": {
+          "texture": "#handle"
+        },
+        "west": {
+          "texture": "#handle"
+        },
+        "up": {
+          "texture": "#handle"
+        },
+        "down": {
+          "texture": "#handle"
+        }
+      }
+    },
+    {
+      "from": [
+        6.5,
+        11,
+        2
+      ],
+      "to": [
+        9.5,
+        15,
+        5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#handle"
+        },
+        "south": {
+          "texture": "#handle"
+        },
+        "east": {
+          "texture": "#handle"
+        },
+        "west": {
+          "texture": "#handle"
+        },
+        "up": {
+          "texture": "#handle"
+        },
+        "down": {
+          "texture": "#handle"
+        }
+      }
+    }
+  ]
+}

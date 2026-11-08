@@ -26,7 +26,12 @@ const GMIN: f64 = 1e-12;
 pub enum Element {
     /// Resistor / wire / resistive load. `max_current` (A) marks it as fusible:
     /// exceeding it is reported in [`Solution::overloaded`].
-    Resistor { a: Node, b: Node, ohms: f64, max_current: Option<f64> },
+    Resistor {
+        a: Node,
+        b: Node,
+        ohms: f64,
+        max_current: Option<f64>,
+    },
     /// Ideal voltage source: `V(pos) - V(neg) = volts`.
     VoltageSource { pos: Node, neg: Node, volts: f64 },
     /// Ideal current source pushing `amps` from `from` to `to` through itself
@@ -37,21 +42,41 @@ pub enum Element {
     /// Inductor. Short in DC; in transient its current `a -> b` carries over.
     Inductor { a: Node, b: Node, henries: f64 },
     /// Switch / lever / relay contact: `ohms` when closed, open otherwise.
-    Switch { a: Node, b: Node, ohms: f64, closed: bool },
+    Switch {
+        a: Node,
+        b: Node,
+        ohms: f64,
+        closed: bool,
+    },
     /// Fuse: a resistor that opens for good (until [`Circuit::reset_fuse`]) once
     /// `|I| > max_current` during a [`Circuit::step`]. Like Power Grid's
     /// `FuseSwitchWire`, the fuse opens on the step *after* the overcurrent.
-    Fuse { a: Node, b: Node, ohms: f64, max_current: f64 },
+    Fuse {
+        a: Node,
+        b: Node,
+        ohms: f64,
+        max_current: f64,
+    },
 }
 
 impl Element {
     pub fn wire(a: Node, b: Node, ohms: f64, max_current: f64) -> Self {
-        Element::Resistor { a, b, ohms, max_current: Some(max_current) }
+        Element::Resistor {
+            a,
+            b,
+            ohms,
+            max_current: Some(max_current),
+        }
     }
 
     /// Resistive load that draws `watts` when it sees `nominal_volts` (R = V²/P).
     pub fn load(a: Node, b: Node, nominal_volts: f64, watts: f64) -> Self {
-        Element::Resistor { a, b, ohms: nominal_volts * nominal_volts / watts, max_current: None }
+        Element::Resistor {
+            a,
+            b,
+            ohms: nominal_volts * nominal_volts / watts,
+            max_current: None,
+        }
     }
 
     fn terminals(&self) -> [Node; 2] {
@@ -72,7 +97,10 @@ pub enum SolveError {
     /// Matrix is singular, e.g. two ideal voltage sources in parallel with different values
     /// or a loop made only of voltage sources.
     Singular,
-    InvalidElement { index: usize, reason: &'static str },
+    InvalidElement {
+        index: usize,
+        reason: &'static str,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -116,7 +144,11 @@ pub struct Circuit {
 impl Circuit {
     /// Circuit with only the ground node.
     pub fn new() -> Self {
-        Self { node_count: 1, elements: Vec::new(), state: Vec::new() }
+        Self {
+            node_count: 1,
+            elements: Vec::new(),
+            state: Vec::new(),
+        }
     }
 
     pub fn add_node(&mut self) -> Node {
@@ -209,8 +241,8 @@ impl Circuit {
     fn solve_mode(&self, mode: Mode) -> Result<Solution, SolveError> {
         self.validate()?;
         let n = self.node_count - 1; // unknown node voltages (ground excluded)
-        // Elements that need an extra MNA unknown (their current): voltage sources,
-        // and inductors in DC (0 V sources).
+                                     // Elements that need an extra MNA unknown (their current): voltage sources,
+                                     // and inductors in DC (0 V sources).
         let mut branch = vec![usize::MAX; self.elements.len()];
         let mut extra = 0;
         for (i, e) in self.elements.iter().enumerate() {
@@ -255,7 +287,12 @@ impl Circuit {
                 z[j] += amps;
             }
         };
-        let stamp_branch = |a: &mut Vec<Vec<f64>>, z: &mut Vec<f64>, row: usize, pos: Node, neg: Node, volts: f64| {
+        let stamp_branch = |a: &mut Vec<Vec<f64>>,
+                            z: &mut Vec<f64>,
+                            row: usize,
+                            pos: Node,
+                            neg: Node,
+                            volts: f64| {
             if let Some(i) = idx(pos) {
                 a[i][row] += 1.0;
                 a[row][i] += 1.0;
@@ -272,14 +309,24 @@ impl Circuit {
                 continue;
             }
             match *e {
-                Element::Resistor { a: na, b: nb, ohms, .. }
-                | Element::Switch { a: na, b: nb, ohms, .. }
-                | Element::Fuse { a: na, b: nb, ohms, .. } => stamp_g(&mut a, na, nb, 1.0 / ohms),
+                Element::Resistor {
+                    a: na, b: nb, ohms, ..
+                }
+                | Element::Switch {
+                    a: na, b: nb, ohms, ..
+                }
+                | Element::Fuse {
+                    a: na, b: nb, ohms, ..
+                } => stamp_g(&mut a, na, nb, 1.0 / ohms),
                 Element::CurrentSource { from, to, amps } => stamp_i(&mut z, from, to, amps),
                 Element::VoltageSource { pos, neg, volts } => {
                     stamp_branch(&mut a, &mut z, branch[k], pos, neg, volts)
                 }
-                Element::Capacitor { a: na, b: nb, farads } => {
+                Element::Capacitor {
+                    a: na,
+                    b: nb,
+                    farads,
+                } => {
                     if let Mode::Transient(dt) = mode {
                         // i = C/dt * (v - v_prev): conductance + source pushing b -> a
                         let g = farads / dt;
@@ -287,7 +334,11 @@ impl Circuit {
                         stamp_i(&mut z, nb, na, g * self.state[k].value);
                     }
                 }
-                Element::Inductor { a: na, b: nb, henries } => match mode {
+                Element::Inductor {
+                    a: na,
+                    b: nb,
+                    henries,
+                } => match mode {
                     Mode::Dc => stamp_branch(&mut a, &mut z, branch[k], na, nb, 0.0),
                     Mode::Transient(dt) => {
                         // i = i_prev + dt/L * v
@@ -313,9 +364,9 @@ impl Circuit {
                 0.0
             } else {
                 match *e {
-                    Element::Resistor { ohms, .. } | Element::Switch { ohms, .. } | Element::Fuse { ohms, .. } => {
-                        v / ohms
-                    }
+                    Element::Resistor { ohms, .. }
+                    | Element::Switch { ohms, .. }
+                    | Element::Fuse { ohms, .. } => v / ohms,
                     Element::CurrentSource { amps, .. } => amps,
                     // MNA unknown is current pos -> (through source) -> neg; flip it so
                     // positive means the source pushes current out of `pos`.
@@ -348,25 +399,40 @@ impl Circuit {
             }
         }
 
-        Ok(Solution { voltages, currents, power, overloaded, blown: Vec::new() })
+        Ok(Solution {
+            voltages,
+            currents,
+            power,
+            overloaded,
+            blown: Vec::new(),
+        })
     }
 
     fn validate(&self) -> Result<(), SolveError> {
         for (index, e) in self.elements.iter().enumerate() {
             let positive = |v: f64| v.is_finite() && v > 0.0;
             let bad = match *e {
-                Element::Resistor { ohms, .. } | Element::Switch { ohms, .. } | Element::Fuse { ohms, .. } => {
+                Element::Resistor { ohms, .. }
+                | Element::Switch { ohms, .. }
+                | Element::Fuse { ohms, .. } => {
                     (!positive(ohms)).then_some("resistance must be > 0")
                 }
-                Element::Capacitor { farads, .. } => (!positive(farads)).then_some("capacitance must be > 0"),
-                Element::Inductor { henries, .. } => (!positive(henries)).then_some("inductance must be > 0"),
+                Element::Capacitor { farads, .. } => {
+                    (!positive(farads)).then_some("capacitance must be > 0")
+                }
+                Element::Inductor { henries, .. } => {
+                    (!positive(henries)).then_some("inductance must be > 0")
+                }
                 _ => None,
             };
             if let Some(reason) = bad {
                 return Err(SolveError::InvalidElement { index, reason });
             }
             if e.terminals().iter().any(|&nd| nd >= self.node_count) {
-                return Err(SolveError::InvalidElement { index, reason: "unknown node" });
+                return Err(SolveError::InvalidElement {
+                    index,
+                    reason: "unknown node",
+                });
             }
         }
         Ok(())
@@ -416,9 +482,23 @@ mod tests {
         let mut c = Circuit::new();
         let top = c.add_node();
         let mid = c.add_node();
-        let src = c.add(Element::VoltageSource { pos: top, neg: GROUND, volts: 12.0 });
-        c.add(Element::Resistor { a: top, b: mid, ohms: 1000.0, max_current: None });
-        c.add(Element::Resistor { a: mid, b: GROUND, ohms: 2000.0, max_current: None });
+        let src = c.add(Element::VoltageSource {
+            pos: top,
+            neg: GROUND,
+            volts: 12.0,
+        });
+        c.add(Element::Resistor {
+            a: top,
+            b: mid,
+            ohms: 1000.0,
+            max_current: None,
+        });
+        c.add(Element::Resistor {
+            a: mid,
+            b: GROUND,
+            ohms: 2000.0,
+            max_current: None,
+        });
         let s = c.solve().unwrap();
         assert!(close(s.voltages[mid], 8.0));
         assert!(close(s.currents[src], 0.004));
@@ -430,13 +510,20 @@ mod tests {
         let mut c = Circuit::new();
         let a = c.add_node();
         let b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 230.0 });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 230.0,
+        });
         c.add(Element::wire(a, b, 0.5, 100.0));
         c.add(Element::load(b, GROUND, 230.0, 2000.0));
         c.add(Element::load(b, GROUND, 230.0, 1000.0));
         let s = c.solve().unwrap();
         let total: f64 = s.power.iter().sum();
-        assert!(total.abs() < 1e-6, "sum of powers should be zero, got {total}");
+        assert!(
+            total.abs() < 1e-6,
+            "sum of powers should be zero, got {total}"
+        );
         // wire drop lowers the voltage the loads see
         assert!(s.voltages[b] < 230.0 && s.voltages[b] > 220.0);
     }
@@ -445,7 +532,11 @@ mod tests {
     fn load_from_power_draws_nominal_power() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 120.0 });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 120.0,
+        });
         let l = c.add(Element::load(a, GROUND, 120.0, 600.0));
         let s = c.solve().unwrap();
         assert!(close(s.power[l], 600.0));
@@ -457,9 +548,18 @@ mod tests {
         let mut c = Circuit::new();
         let a = c.add_node();
         let b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 100.0 });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 100.0,
+        });
         let w = c.add(Element::wire(a, b, 0.1, 5.0));
-        c.add(Element::Resistor { a: b, b: GROUND, ohms: 10.0, max_current: None }); // ~9.9 A
+        c.add(Element::Resistor {
+            a: b,
+            b: GROUND,
+            ohms: 10.0,
+            max_current: None,
+        }); // ~9.9 A
         let s = c.solve().unwrap();
         assert_eq!(s.overloaded, vec![w]);
     }
@@ -468,8 +568,17 @@ mod tests {
     fn current_source_into_resistor() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        let src = c.add(Element::CurrentSource { from: GROUND, to: a, amps: 2.0 });
-        c.add(Element::Resistor { a, b: GROUND, ohms: 5.0, max_current: None });
+        let src = c.add(Element::CurrentSource {
+            from: GROUND,
+            to: a,
+            amps: 2.0,
+        });
+        c.add(Element::Resistor {
+            a,
+            b: GROUND,
+            ohms: 5.0,
+            max_current: None,
+        });
         let s = c.solve().unwrap();
         assert!(close(s.voltages[a], 10.0));
         assert!(close(s.power[src], -20.0));
@@ -481,9 +590,23 @@ mod tests {
         let a = c.add_node();
         let island_a = c.add_node();
         let island_b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 5.0 });
-        c.add(Element::Resistor { a, b: GROUND, ohms: 10.0, max_current: None });
-        c.add(Element::Resistor { a: island_a, b: island_b, ohms: 10.0, max_current: None });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 5.0,
+        });
+        c.add(Element::Resistor {
+            a,
+            b: GROUND,
+            ohms: 10.0,
+            max_current: None,
+        });
+        c.add(Element::Resistor {
+            a: island_a,
+            b: island_b,
+            ohms: 10.0,
+            max_current: None,
+        });
         let s = c.solve().unwrap();
         assert!(close(s.voltages[a], 5.0));
         assert!(s.voltages[island_a].abs() < 1e-6);
@@ -493,8 +616,16 @@ mod tests {
     fn conflicting_parallel_sources_are_singular() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 5.0 });
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 12.0 });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 5.0,
+        });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 12.0,
+        });
         assert_eq!(c.solve().unwrap_err(), SolveError::Singular);
     }
 
@@ -502,10 +633,23 @@ mod tests {
     fn invalid_elements_rejected() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        c.add(Element::Resistor { a, b: GROUND, ohms: 0.0, max_current: None });
-        assert!(matches!(c.solve(), Err(SolveError::InvalidElement { index: 0, .. })));
+        c.add(Element::Resistor {
+            a,
+            b: GROUND,
+            ohms: 0.0,
+            max_current: None,
+        });
+        assert!(matches!(
+            c.solve(),
+            Err(SolveError::InvalidElement { index: 0, .. })
+        ));
         let mut c = Circuit::new();
-        c.add(Element::Resistor { a: 7, b: GROUND, ohms: 1.0, max_current: None });
+        c.add(Element::Resistor {
+            a: 7,
+            b: GROUND,
+            ohms: 1.0,
+            max_current: None,
+        });
         assert!(matches!(c.solve(), Err(SolveError::InvalidElement { .. })));
     }
 
@@ -515,9 +659,22 @@ mod tests {
         let mut c = Circuit::new();
         let top = c.add_node();
         let mid = c.add_node();
-        c.add(Element::VoltageSource { pos: top, neg: GROUND, volts: 10.0 });
-        c.add(Element::Resistor { a: top, b: mid, ohms: 1000.0, max_current: None });
-        let cap = c.add(Element::Capacitor { a: mid, b: GROUND, farads: 1e-3 });
+        c.add(Element::VoltageSource {
+            pos: top,
+            neg: GROUND,
+            volts: 10.0,
+        });
+        c.add(Element::Resistor {
+            a: top,
+            b: mid,
+            ohms: 1000.0,
+            max_current: None,
+        });
+        let cap = c.add(Element::Capacitor {
+            a: mid,
+            b: GROUND,
+            farads: 1e-3,
+        });
         // DC: capacitor is open, sees the full voltage, no current
         let dc = c.solve().unwrap();
         assert!(close(dc.voltages[mid], 10.0) && close(dc.currents[cap], 0.0));
@@ -536,8 +693,17 @@ mod tests {
     fn charged_capacitor_discharges_into_load() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        let cap = c.add(Element::Capacitor { a, b: GROUND, farads: 0.1 });
-        let r = c.add(Element::Resistor { a, b: GROUND, ohms: 10.0, max_current: None });
+        let cap = c.add(Element::Capacitor {
+            a,
+            b: GROUND,
+            farads: 0.1,
+        });
+        let r = c.add(Element::Resistor {
+            a,
+            b: GROUND,
+            ohms: 10.0,
+            max_current: None,
+        });
         c.set_stored(cap, 100.0);
         let s = c.step(TICK).unwrap();
         // tau = 1 s; after one 50 ms BE step: 100 / (1 + 0.05) = 95.24 V
@@ -553,13 +719,29 @@ mod tests {
         let mut c = Circuit::new();
         let a = c.add_node();
         let b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 12.0 });
-        c.add(Element::Resistor { a, b, ohms: 2.0, max_current: None });
-        let l = c.add(Element::Inductor { a: b, b: GROUND, henries: 1.0 });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 12.0,
+        });
+        c.add(Element::Resistor {
+            a,
+            b,
+            ohms: 2.0,
+            max_current: None,
+        });
+        let l = c.add(Element::Inductor {
+            a: b,
+            b: GROUND,
+            henries: 1.0,
+        });
         assert!(close(c.solve().unwrap().currents[l], 6.0));
 
         let first = c.step(TICK).unwrap().currents[l];
-        assert!(first > 0.0 && first < 1.0, "inductor resists sudden change: {first}");
+        assert!(
+            first > 0.0 && first < 1.0,
+            "inductor resists sudden change: {first}"
+        );
         for _ in 0..100 {
             c.step(TICK).unwrap();
         }
@@ -571,9 +753,23 @@ mod tests {
         let mut c = Circuit::new();
         let a = c.add_node();
         let b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 10.0 });
-        let sw = c.add(Element::Switch { a, b, ohms: 0.01, closed: false });
-        let load = c.add(Element::Resistor { a: b, b: GROUND, ohms: 10.0, max_current: None });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 10.0,
+        });
+        let sw = c.add(Element::Switch {
+            a,
+            b,
+            ohms: 0.01,
+            closed: false,
+        });
+        let load = c.add(Element::Resistor {
+            a: b,
+            b: GROUND,
+            ohms: 10.0,
+            max_current: None,
+        });
         let s = c.solve().unwrap();
         assert!(close(s.currents[load], 0.0) && close(s.currents[sw], 0.0));
         c.set_switch(sw, true);
@@ -585,9 +781,23 @@ mod tests {
         let mut c = Circuit::new();
         let a = c.add_node();
         let b = c.add_node();
-        c.add(Element::VoltageSource { pos: a, neg: GROUND, volts: 10.0 });
-        let fuse = c.add(Element::Fuse { a, b, ohms: 0.01, max_current: 5.0 });
-        let load = c.add(Element::Resistor { a: b, b: GROUND, ohms: 1.0, max_current: None });
+        c.add(Element::VoltageSource {
+            pos: a,
+            neg: GROUND,
+            volts: 10.0,
+        });
+        let fuse = c.add(Element::Fuse {
+            a,
+            b,
+            ohms: 0.01,
+            max_current: 5.0,
+        });
+        let load = c.add(Element::Resistor {
+            a: b,
+            b: GROUND,
+            ohms: 1.0,
+            max_current: None,
+        });
 
         // DC solve reports but doesn't blow
         assert_eq!(c.solve().unwrap().overloaded, vec![fuse]);
@@ -608,8 +818,16 @@ mod tests {
         // Backward Euler is dissipative: energy must never grow.
         let mut c = Circuit::new();
         let a = c.add_node();
-        let cap = c.add(Element::Capacitor { a, b: GROUND, farads: 1.0 });
-        let l = c.add(Element::Inductor { a, b: GROUND, henries: 1.0 });
+        let cap = c.add(Element::Capacitor {
+            a,
+            b: GROUND,
+            farads: 1.0,
+        });
+        let l = c.add(Element::Inductor {
+            a,
+            b: GROUND,
+            henries: 1.0,
+        });
         c.set_stored(cap, 1.0);
         let energy = |c: &Circuit| 0.5 * c.stored(cap).powi(2) + 0.5 * c.stored(l).powi(2);
         let mut prev = energy(&c);
@@ -628,8 +846,14 @@ mod tests {
     fn invalid_reactive_elements_rejected() {
         let mut c = Circuit::new();
         let a = c.add_node();
-        c.add(Element::Capacitor { a, b: GROUND, farads: 0.0 });
-        assert!(matches!(c.solve(), Err(SolveError::InvalidElement { index: 0, .. })));
+        c.add(Element::Capacitor {
+            a,
+            b: GROUND,
+            farads: 0.0,
+        });
+        assert!(matches!(
+            c.solve(),
+            Err(SolveError::InvalidElement { index: 0, .. })
+        ));
     }
 }
-

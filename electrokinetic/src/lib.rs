@@ -97,7 +97,13 @@ impl Default for ElectricMotor {
 
 impl ElectricMotor {
     pub fn new(params: MotorParams) -> Self {
-        Self { params, generated_rpm: 0, accumulated: 0.0, ticks: 0, load: params.min_load }
+        Self {
+            params,
+            generated_rpm: 0,
+            accumulated: 0.0,
+            ticks: 0,
+            load: params.min_load,
+        }
     }
 
     /// Restore from saved data (Power Grid saves `GeneratedSpeed`).
@@ -114,7 +120,10 @@ impl ElectricMotor {
     /// Kinetic role of the motor block. `sign` is +1/-1 from the block's facing
     /// (Create's `convertToDirection`).
     pub fn role(&self, sign: f32) -> NodeRole {
-        NodeRole::Source { rpm: self.generated_rpm as f32 * sign, capacity: self.params.stress_capacity }
+        NodeRole::Source {
+            rpm: self.generated_rpm as f32 * sign,
+            capacity: self.params.stress_capacity,
+        }
     }
 
     pub fn load(&self) -> f32 {

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:encased_chain_drive",
+    "minecraft:redstone",
+    "minecraft:comparator"
+  ],
+  "result": {
+    "id": "horizon_create:adjustable_chain_gearshift",
+    "count": 1
+  }
+}

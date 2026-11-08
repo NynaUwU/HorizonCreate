@@ -1,0 +1,10 @@
+[package]
+name = "mod-horizon_create"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# The launcher points this at the Horizon source it builds the game from. Any other
+# dependency must be a crate and version in Horizon's Cargo.lock (this mod has none:
+# the engine is copied into src/engine by tools/sync_native.py).
+horizon-client = { git = "https://github.com/horizon-rust/horizon" }

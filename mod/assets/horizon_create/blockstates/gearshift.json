@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "axis=y,powered=false": {
+      "model": "horizon_create:block/gearshift"
+    },
+    "axis=y,powered=true": {
+      "model": "horizon_create:block/gearshift_on"
+    },
+    "axis=x,powered=false": {
+      "model": "horizon_create:block/gearshift",
+      "x": 90,
+      "y": 90
+    },
+    "axis=x,powered=true": {
+      "model": "horizon_create:block/gearshift_on",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,powered=false": {
+      "model": "horizon_create:block/gearshift",
+      "x": 90
+    },
+    "axis=z,powered=true": {
+      "model": "horizon_create:block/gearshift_on",
+      "x": 90
+    }
+  }
+}

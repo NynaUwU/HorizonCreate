@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "side": "horizon_create:block/gearbox",
+    "end": "horizon_create:block/andesite_casing",
+    "particle": "horizon_create:block/gearbox"
+  }
+}

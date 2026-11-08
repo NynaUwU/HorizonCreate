@@ -1,0 +1,10 @@
+# horizon_create: the native half of the mod (kinetics simulation + drawing of the
+# moving parts). Pairs with the content mod in ../mod (same id).
+# Build: horizon-launcher native-build <this folder> --instance <instance> --trust-native-code
+# Unpinned on purpose: it uses only named hook points, so it builds on the installed Horizon.
+[mod]
+id = "horizon_create"
+version = "0.1.0"
+
+[api]
+path = "api"

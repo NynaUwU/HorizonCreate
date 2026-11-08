@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "side": "horizon_create:block/creative_motor_side",
+    "end": "horizon_create:block/creative_motor_front",
+    "particle": "horizon_create:block/creative_motor_side"
+  }
+}

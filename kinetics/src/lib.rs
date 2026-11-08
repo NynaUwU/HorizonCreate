@@ -10,5 +10,6 @@ pub mod presets;
 
 pub use network::{Network, NodeId, NodeRole, Solution, Status, Subnetwork, MAX_RPM};
 pub use placement::{
-    connection, Axis, BeltError, BlockKind, Dir, KineticBlock, KineticWorld, Link, Pos, WorldSolution,
+    connection, Axis, BeltError, BlockKind, Dir, KineticBlock, KineticWorld, Link, Pos,
+    WorldSolution,
 };

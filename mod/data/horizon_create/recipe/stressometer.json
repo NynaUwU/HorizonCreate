@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:andesite_casing",
+    "minecraft:clock"
+  ],
+  "result": {
+    "id": "horizon_create:stressometer",
+    "count": 1
+  }
+}

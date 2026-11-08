@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:andesite_casing",
+    "horizon_create:cogwheel"
+  ],
+  "result": {
+    "id": "horizon_create:gearbox",
+    "count": 1
+  }
+}

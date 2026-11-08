@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "horizon_create:block/stressometer"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "itemGroup.horizon_create.main": "Horizon Create",
+  "block.horizon_create.shaft": "Shaft",
+  "block.horizon_create.cogwheel": "Cogwheel",
+  "block.horizon_create.large_cogwheel": "Large Cogwheel",
+  "block.horizon_create.andesite_casing": "Andesite Casing",
+  "block.horizon_create.gearbox": "Gearbox",
+  "block.horizon_create.clutch": "Clutch",
+  "block.horizon_create.gearshift": "Gearshift",
+  "block.horizon_create.encased_chain_drive": "Encased Chain Drive",
+  "block.horizon_create.adjustable_chain_gearshift": "Adjustable Chain Gearshift",
+  "block.horizon_create.rotation_speed_controller": "Rotation Speed Controller",
+  "block.horizon_create.hand_crank": "Hand Crank",
+  "block.horizon_create.creative_motor": "Creative Motor",
+  "block.horizon_create.speedometer": "Speedometer",
+  "block.horizon_create.stressometer": "Stressometer",
+  "item.horizon_create.andesite_alloy": "Andesite Alloy"
+}

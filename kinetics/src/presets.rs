@@ -4,7 +4,7 @@
 //!
 //! Everything here is a server-config default in Create; treat it as such.
 
-use crate::network::NodeRole;
+use super::network::NodeRole;
 
 /// Stress impact (SU/RPM) of Create machines.
 pub mod impact {
@@ -48,33 +48,50 @@ pub fn machine(impact: f32) -> NodeRole {
 
 /// Creative motor at `rpm` (Create default 16, range ±maxRotationSpeed).
 pub fn creative_motor(rpm: f32) -> NodeRole {
-    NodeRole::Source { rpm, capacity: capacity::CREATIVE_MOTOR }
+    NodeRole::Source {
+        rpm,
+        capacity: capacity::CREATIVE_MOTOR,
+    }
 }
 
 /// Hand crank being turned (32 RPM; negative when cranked the other way).
 pub fn hand_crank(backwards: bool) -> NodeRole {
-    NodeRole::Source { rpm: if backwards { -32.0 } else { 32.0 }, capacity: capacity::HAND_CRANK }
+    NodeRole::Source {
+        rpm: if backwards { -32.0 } else { 32.0 },
+        capacity: capacity::HAND_CRANK,
+    }
 }
 
 /// Water wheel: `flow` in -1..=1 (Create's clamped flow score). Large wheels turn at
 /// half speed (`8 / size`).
 pub fn water_wheel(flow: f32, large: bool) -> NodeRole {
-    let (size, cap) = if large { (2.0, capacity::LARGE_WATER_WHEEL) } else { (1.0, capacity::WATER_WHEEL) };
-    NodeRole::Source { rpm: flow.clamp(-1.0, 1.0) * 8.0 / size, capacity: cap }
+    let (size, cap) = if large {
+        (2.0, capacity::LARGE_WATER_WHEEL)
+    } else {
+        (1.0, capacity::WATER_WHEEL)
+    };
+    NodeRole::Source {
+        rpm: flow.clamp(-1.0, 1.0) * 8.0 / size,
+        capacity: cap,
+    }
 }
 
 /// Steam engine shaft: 16 RPM × `speed_modifier` (boiler level), capacity scaled by
 /// `efficiency` (0..=1), like `PoweredShaftBlockEntity`.
 pub fn steam_engine(speed_modifier: f32, efficiency: f32) -> NodeRole {
     let cap = capacity::STEAM_ENGINE * efficiency;
-    let rpm = if cap > 0.0 { 16.0 * speed_modifier } else { 0.0 };
+    let rpm = if cap > 0.0 {
+        16.0 * speed_modifier
+    } else {
+        0.0
+    };
     NodeRole::Source { rpm, capacity: cap }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::network::{Network, Status};
     use super::*;
-    use crate::network::{Network, Status};
 
     #[test]
     fn hand_crank_runs_one_press_at_32_rpm() {

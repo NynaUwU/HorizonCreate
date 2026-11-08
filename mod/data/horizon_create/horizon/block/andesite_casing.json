@@ -1,0 +1,7 @@
+{
+  "template": "minecraft:polished_andesite",
+  "properties": {
+    "hardness": 2.0,
+    "sounds": "minecraft:oak_planks"
+  }
+}

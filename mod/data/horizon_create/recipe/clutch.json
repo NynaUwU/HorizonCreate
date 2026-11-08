@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "horizon_create:andesite_casing",
+    "horizon_create:shaft",
+    "minecraft:redstone"
+  ],
+  "result": {
+    "id": "horizon_create:clutch",
+    "count": 1
+  }
+}

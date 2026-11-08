@@ -1,0 +1,21 @@
+{
+  "title": "itemGroup.horizon_create.main",
+  "icon": "horizon_create:cogwheel",
+  "items": [
+    "horizon_create:andesite_alloy",
+    "horizon_create:shaft",
+    "horizon_create:cogwheel",
+    "horizon_create:large_cogwheel",
+    "horizon_create:andesite_casing",
+    "horizon_create:gearbox",
+    "horizon_create:clutch",
+    "horizon_create:gearshift",
+    "horizon_create:encased_chain_drive",
+    "horizon_create:adjustable_chain_gearshift",
+    "horizon_create:rotation_speed_controller",
+    "horizon_create:hand_crank",
+    "horizon_create:creative_motor",
+    "horizon_create:speedometer",
+    "horizon_create:stressometer"
+  ]
+}

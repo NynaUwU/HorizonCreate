@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "horizon_create:block/encased_chain_drive"
+    },
+    "axis=x": {
+      "model": "horizon_create:block/encased_chain_drive",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z": {
+      "model": "horizon_create:block/encased_chain_drive",
+      "x": 90
+    }
+  }
+}

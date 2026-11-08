@@ -1,0 +1,7 @@
+{
+  "template": "minecraft:lever",
+  "properties": {
+    "hardness": 1.0,
+    "sounds": "minecraft:oak_planks"
+  }
+}

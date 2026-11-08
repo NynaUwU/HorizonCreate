@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["kinetics", "grid", "electrokinetic"]
+members = ["kinetics", "grid", "electrokinetic", "hcglue"]
 
 [workspace.package]
 edition = "2021"

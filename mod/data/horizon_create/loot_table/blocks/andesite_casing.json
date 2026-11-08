@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "horizon_create:andesite_casing"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "horizon_create:blocks/andesite_casing"
+}

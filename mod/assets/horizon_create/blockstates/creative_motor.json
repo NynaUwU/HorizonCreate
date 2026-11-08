@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "horizon_create:block/creative_motor"
+    },
+    "axis=x": {
+      "model": "horizon_create:block/creative_motor",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z": {
+      "model": "horizon_create:block/creative_motor",
+      "x": 90
+    }
+  }
+}

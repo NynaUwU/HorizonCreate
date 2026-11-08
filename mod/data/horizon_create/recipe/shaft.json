@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "A",
+    "A"
+  ],
+  "key": {
+    "A": "horizon_create:andesite_alloy"
+  },
+  "result": {
+    "id": "horizon_create:shaft",
+    "count": 8
+  }
+}

@@ -94,7 +94,12 @@ pub struct Network {
 
 impl Default for Network {
     fn default() -> Self {
-        Self { roles: Vec::new(), adj: Vec::new(), links: Vec::new(), max_rpm: MAX_RPM }
+        Self {
+            roles: Vec::new(),
+            adj: Vec::new(),
+            links: Vec::new(),
+            max_rpm: MAX_RPM,
+        }
     }
 }
 
@@ -270,8 +275,10 @@ impl Network {
                 xs.push(x.map_or(0.0, |(v, _)| v));
             }
 
-            let nodes: Vec<NodeId> =
-                members.iter().flat_map(|&ci| comps[ci].nodes.iter().copied()).collect();
+            let nodes: Vec<NodeId> = members
+                .iter()
+                .flat_map(|&ci| comps[ci].nodes.iter().copied())
+                .collect();
             let capacity: f32 = members.iter().map(|&ci| comps[ci].capacity).sum();
             let mut impact = 0.0;
             let mut overspeed = None;
@@ -307,10 +314,19 @@ impl Network {
                     }
                 }
             }
-            subnetworks.push(Subnetwork { nodes, status, capacity, impact });
+            subnetworks.push(Subnetwork {
+                nodes,
+                status,
+                capacity,
+                impact,
+            });
         }
 
-        Solution { speed, subnetwork_of, subnetworks }
+        Solution {
+            speed,
+            subnetwork_of,
+            subnetworks,
+        }
     }
 }
 
@@ -340,7 +356,10 @@ mod tests {
     use super::*;
 
     fn motor(rpm: f32) -> NodeRole {
-        NodeRole::Source { rpm, capacity: 16.0 } // creative motor-ish: 16 SU/RPM
+        NodeRole::Source {
+            rpm,
+            capacity: 16.0,
+        } // creative motor-ish: 16 SU/RPM
     }
 
     #[test]
@@ -477,7 +496,7 @@ mod tests {
         assert_eq!(s.speed[cog], 100.0);
         assert_eq!(s.speed[out], -200.0);
         assert_eq!(s.speed[m], 16.0); // input side keeps its own speed
-        // one shared stress network: 200 SU impact vs 256 SU capacity
+                                      // one shared stress network: 200 SU impact vs 256 SU capacity
         assert_eq!(s.subnetwork_of[m], s.subnetwork_of[out]);
         assert_eq!(s.subnetworks[s.subnetwork_of[m]].impact, 200.0);
     }

@@ -1,0 +1,201 @@
+//! horizon_create native trait mod: the Horizon side of the kinetics port.
+//!
+//! All the logic lives in `engine` (copies of the `kinetics` and `hcglue` crates,
+//! tested in this repository); this file only moves data between Horizon's hook
+//! points and it:
+//!
+//! - server: `level_tick_pre` -> each block entity's `block_entity_tick` reports its
+//!   block and stores the last readout in its NBT -> `level_tick_post` solves;
+//! - client: `block_entity_submit` draws shafts and cogwheels turning (`spin`) and the
+//!   gauges' readings, from what the server sent (`block_entity_update_tag`).
+//!
+//! Written against Horizon's mod API (`horizon_client::mod_api`); it is compiled by
+//! the launcher together with the game.
+
+mod engine;
+
+use engine::hcglue::{self, Engine, Readout, Spinner};
+use engine::kinetics::Axis;
+use horizon_client::mod_api::{
+    BlockEntityEvent, BlockEntityRenderBoundingBoxEvent, BlockEntitySubmitEvent, BlockEntityTickEvent,
+    BlockEntityTicksEvent, BlockEntityUpdateTagEvent, Compound, Hooks, Host, LevelTickPostEvent,
+    LevelTickPreEvent, ModBlockEntity, StandaloneModelsEvent, Tag, Text,
+};
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+pub fn hooks() -> Box<dyn Hooks> {
+    Box::new(Mod::default())
+}
+
+#[derive(Default)]
+struct Mod {
+    /// Server: every level's kinetic network.
+    engine: Mutex<Engine>,
+    /// Server: the level being ticked (block entity ticks don't say which).
+    dimension: Mutex<String>,
+    /// Client: angle continuity of every turning part.
+    spinners: Mutex<HashMap<[i32; 3], Spinner>>,
+}
+
+const KEYS: [&str; 4] = ["rpm", "impact", "capacity", "status"];
+
+fn read(nbt: &Compound, key: &str) -> Option<&Tag> {
+    nbt.iter().find(|(k, _)| k.0.iter().copied().eq(key.encode_utf16())).map(|(_, v)| v)
+}
+
+fn read_f32(nbt: &Compound, key: &str) -> f32 {
+    match read(nbt, key) {
+        Some(Tag::Float(bits)) => f32::from_bits(*bits),
+        Some(Tag::Byte(b)) => *b as f32,
+        _ => 0.0,
+    }
+}
+
+fn readout_of(nbt: &Compound) -> Readout {
+    Readout {
+        rpm: read_f32(nbt, "rpm"),
+        impact: read_f32(nbt, "impact"),
+        capacity: read_f32(nbt, "capacity"),
+        status: read_f32(nbt, "status") as u8,
+    }
+}
+
+fn readout_tags(r: &Readout) -> [(&'static str, Tag); 4] {
+    [
+        (KEYS[0], Tag::Float(r.rpm.to_bits())),
+        (KEYS[1], Tag::Float(r.impact.to_bits())),
+        (KEYS[2], Tag::Float(r.capacity.to_bits())),
+        (KEYS[3], Tag::Byte(r.status as i8)),
+    ]
+}
+
+fn spinning_model(name: &str) -> Option<&'static str> {
+    hcglue::SPINNING_MODELS.iter().find(|(n, _)| *n == name).map(|(_, m)| *m)
+}
+
+impl Hooks for Mod {
+    fn standalone_models(&self, event: &mut StandaloneModelsEvent<'_>) {
+        for (_, model) in hcglue::SPINNING_MODELS {
+            event.models.push((*model).to_string());
+        }
+    }
+
+    fn block_entity(&self, _host: &mut dyn Host, event: &mut BlockEntityEvent<'_>) {
+        if event.entity.is_none() && hcglue::local_name(event.block).is_some() {
+            *event.entity = Some((event.block.to_string(), Compound::new()));
+        }
+    }
+
+    fn block_entity_ticks(&self, _host: &dyn Host, event: &mut BlockEntityTicksEvent<'_>) {
+        if hcglue::local_name(event.block).is_some() {
+            event.ticks = true;
+        }
+    }
+
+    fn level_tick_pre(&self, _host: &mut dyn Host, event: &mut LevelTickPreEvent<'_>) {
+        *self.dimension.lock().unwrap() = event.dimension.to_string();
+        self.engine.lock().unwrap().begin_level(event.dimension);
+    }
+
+    fn block_entity_tick(&self, host: &mut dyn Host, event: &mut BlockEntityTickEvent<'_>) {
+        let pos = event.pos;
+        let id = host.block(pos);
+        let Some(name) = hcglue::local_name(&id) else { return };
+        let dimension = self.dimension.lock().unwrap().clone();
+        let signal = host.neighbor_signal(&dimension, pos);
+
+        // clutch / gearshift show their state with the `powered` property
+        if matches!(name, "clutch" | "gearshift") {
+            let want = if signal > 0 { "true" } else { "false" };
+            if host.block_property(pos, "powered").as_deref() != Some(want) {
+                host.set_block_property(pos, "powered", want);
+            }
+        }
+
+        let props = |key: &str| host.block_property(pos, key);
+        let block = hcglue::block_from_state(&id, &props, signal);
+        let readout = {
+            let mut engine = self.engine.lock().unwrap();
+            engine.report(pos, block);
+            engine.readout(pos)
+        };
+
+        // only touch the entity when something changed: a mutable borrow marks it
+        // changed and sends it to clients again
+        let entity: &mut ModBlockEntity = &mut *event.entity;
+        if readout_of(&entity.nbt) != readout {
+            for (key, tag) in readout_tags(&readout) {
+                entity.nbt.insert(key.into(), tag);
+            }
+        }
+    }
+
+    fn level_tick_post(&self, _host: &mut dyn Host, _event: &mut LevelTickPostEvent<'_>) {
+        self.engine.lock().unwrap().end_level();
+    }
+
+    fn block_entity_update_tag(&self, event: &mut BlockEntityUpdateTagEvent<'_>) {
+        if hcglue::local_name(&event.entity.id).is_none() {
+            return;
+        }
+        let r = readout_of(&event.entity.nbt);
+        *event.tag = Some(readout_tags(&r).into_iter().map(|(k, v)| (k.into(), v)).collect());
+    }
+
+    fn block_entity_render_bounding_box(
+        &self,
+        _host: &dyn Host,
+        event: &mut BlockEntityRenderBoundingBoxEvent<'_>,
+    ) {
+        match hcglue::local_name(event.block) {
+            // large cogwheels reach a block and a half from their centre
+            Some("large_cogwheel") => *event.bounds = [-1.0, -1.0, -1.0, 2.0, 2.0, 2.0],
+            // gauge text floats above the block
+            Some("speedometer" | "stressometer") => event.bounds[4] = 2.0,
+            _ => {}
+        }
+    }
+
+    fn block_entity_submit(&self, host: &dyn Host, event: &mut BlockEntitySubmitEvent<'_>) {
+        let Some(name) = hcglue::local_name(event.block) else { return };
+        let readout = readout_of(&event.entity.nbt);
+        let draw = &mut *event.draw;
+
+        if let Some(model) = spinning_model(name) {
+            let axis = match host.block_state_property(event.state, "axis").as_deref() {
+                Some("x") => Axis::X,
+                Some("z") => Axis::Z,
+                _ => Axis::Y,
+            };
+            let spin = self.spinners.lock().unwrap().entry(event.pos).or_default().update(readout.rpm, draw.game_time);
+            let centre = [0.5, 0.5, 0.5];
+            draw.push();
+            draw.spin(hcglue::axis_vector(axis), centre, spin.degrees_per_tick, spin.phase);
+            // the models are built around Y: turn them onto the block's axis
+            match axis {
+                Axis::X => draw.rotate_about([0.0, 0.0, 1.0], -90.0, centre),
+                Axis::Z => draw.rotate_about([1.0, 0.0, 0.0], 90.0, centre),
+                Axis::Y => {}
+            }
+            host.draw_model(draw, model, 0xFFFFFF);
+            draw.still();
+            draw.pop();
+        }
+
+        if let Some(line) = hcglue::gauge_text(name, &readout) {
+            let color = if readout.status == hcglue::status::OVERSTRESSED { 0xFFFF5555 } else { 0xFFFFFFFF };
+            let text = Text::literal(line.clone());
+            let half_width = line.chars().count() as f32 * 3.0;
+            // the same line on the four sides, like a sign seen from anywhere
+            for quarter in 0..4 {
+                draw.push();
+                draw.rotate_about([0.0, 1.0, 0.0], 90.0 * quarter as f32, [0.5, 0.5, 0.5]);
+                draw.translate([0.5, 1.35, 0.5]);
+                draw.scale([1.0 / 64.0, -1.0 / 64.0, 1.0 / 64.0]);
+                host.draw_text(draw, &text, [-half_width, 0.0], color, false, 0xFF000000);
+                draw.pop();
+            }
+        }
+    }
+}

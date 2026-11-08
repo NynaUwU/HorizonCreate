@@ -1,0 +1,15 @@
+{
+  "values": [
+    "horizon_create:shaft",
+    "horizon_create:andesite_casing",
+    "horizon_create:gearbox",
+    "horizon_create:clutch",
+    "horizon_create:gearshift",
+    "horizon_create:encased_chain_drive",
+    "horizon_create:adjustable_chain_gearshift",
+    "horizon_create:rotation_speed_controller",
+    "horizon_create:creative_motor",
+    "horizon_create:speedometer",
+    "horizon_create:stressometer"
+  ]
+}
