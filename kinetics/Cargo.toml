@@ -1,0 +1,8 @@
+[package]
+name = "kinetics"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Engine-independent Create-style rotational network solver (RPM propagation + stress units)"
+
+[dependencies]
