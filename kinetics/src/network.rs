@@ -66,15 +66,51 @@ impl Solution {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+/// A rotation speed controller link (Create's `SpeedControllerBlockEntity`).
+///
+/// Whichever side is driven by something else forces the other side to spin at
+/// `target` RPM (measured at that side's node). Both sides then share one stress
+/// network, like in Create where the cog's source is the controller.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ControlledLink {
+    a: NodeId,
+    b: NodeId,
+    target: f32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Origin {
+    Source,
+    Link(usize),
+}
+
+#[derive(Clone, Debug)]
 pub struct Network {
     roles: Vec<NodeRole>,
     adj: Vec<Vec<(NodeId, f32)>>,
+    links: Vec<ControlledLink>,
+    max_rpm: f32,
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self { roles: Vec::new(), adj: Vec::new(), links: Vec::new(), max_rpm: MAX_RPM }
+    }
 }
 
 impl Network {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Override the overspeed limit (Create's `maxRotationSpeed` config, default 256).
+    pub fn with_max_rpm(mut self, max_rpm: f32) -> Self {
+        self.max_rpm = max_rpm;
+        self
+    }
+
+    pub fn max_rpm(&self) -> f32 {
+        self.max_rpm
     }
 
     pub fn add_node(&mut self, role: NodeRole) -> NodeId {
@@ -106,81 +142,156 @@ impl Network {
         self.adj[b].push((a, 1.0 / ratio));
     }
 
+    /// Speed-controller link: when one side turns because of something else, the other
+    /// side is driven at `target` RPM. `target == 0` disables the link.
+    pub fn connect_controlled(&mut self, a: NodeId, b: NodeId, target: f32) {
+        self.links.push(ControlledLink { a, b, target });
+    }
+
     pub fn solve(&self) -> Solution {
         let n = self.len();
-        let mut speed = vec![0.0f32; n];
-        let mut subnetwork_of = vec![usize::MAX; n];
-        // factor[i]: speed(i) = factor[i] * X, where X is the speed of the BFS root.
-        let mut factor = vec![0.0f32; n];
-        let mut subnetworks = Vec::new();
 
+        // 1. Rigid components: nodes tied together by fixed ratios.
+        //    factor[i]: speed(i) = factor[i] * X, X = speed of the component's root.
+        let mut comp_of = vec![usize::MAX; n];
+        let mut factor = vec![0.0f32; n];
+        let mut comps: Vec<Rigid> = Vec::new();
         for root in 0..n {
-            if subnetwork_of[root] != usize::MAX {
+            if comp_of[root] != usize::MAX {
                 continue;
             }
-            let id = subnetworks.len();
-            let mut nodes = Vec::new();
-            let mut conflict: Option<(NodeId, NodeId)> = None;
-
-            // 1. Relative factors via BFS; detect loops with inconsistent ratios.
-            subnetwork_of[root] = id;
+            let id = comps.len();
+            let mut c = Rigid::default();
+            comp_of[root] = id;
             factor[root] = 1.0;
             let mut queue = VecDeque::from([root]);
             while let Some(cur) = queue.pop_front() {
-                nodes.push(cur);
+                c.nodes.push(cur);
                 for &(next, ratio) in &self.adj[cur] {
                     let expected = factor[cur] * ratio;
-                    if subnetwork_of[next] == usize::MAX {
-                        subnetwork_of[next] = id;
+                    if comp_of[next] == usize::MAX {
+                        comp_of[next] = id;
                         factor[next] = expected;
                         queue.push_back(next);
-                    } else if conflict.is_none() && !approx(factor[next], expected) {
-                        conflict = Some((cur, next));
+                    } else if c.conflict.is_none() && !approx(factor[next], expected) {
+                        c.conflict = Some((cur, next));
                     }
                 }
             }
+            for &i in &c.nodes {
+                if let NodeRole::Source { rpm, capacity } = self.roles[i] {
+                    c.capacity += capacity * rpm.abs();
+                    if rpm.abs() >= EPS {
+                        c.drivers.push((rpm / factor[i], i, Origin::Source));
+                    }
+                }
+            }
+            comps.push(c);
+        }
 
-            // 2. Sources must agree on the root speed X. The fastest one dictates
-            //    (Create behaviour); opposite directions are a conflict.
-            let mut x: Option<(f32, NodeId)> = None;
-            let mut capacity = 0.0;
-            for &i in &nodes {
-                if let NodeRole::Source { rpm, capacity: cap } = self.roles[i] {
-                    capacity += cap * rpm.abs();
-                    if rpm.abs() < EPS {
+        // 2. Speed controllers: a side that is driven by something other than this
+        //    link drives the other side at the target speed. Drivers only get added,
+        //    so this reaches a fixed point after at most 2 * links passes.
+        let mut active = vec![false; self.links.len()];
+        let mut added = vec![[false; 2]; self.links.len()];
+        loop {
+            let mut changed = false;
+            for (li, l) in self.links.iter().enumerate() {
+                if l.target.abs() < EPS {
+                    continue;
+                }
+                for (dir, (from, to)) in [(l.a, l.b), (l.b, l.a)].into_iter().enumerate() {
+                    if added[li][dir] {
                         continue;
                     }
-                    let xi = rpm / factor[i];
+                    let driven = comps[comp_of[from]]
+                        .drivers
+                        .iter()
+                        .any(|&(_, _, o)| o != Origin::Link(li));
+                    if driven {
+                        let x = l.target / factor[to];
+                        comps[comp_of[to]].drivers.push((x, to, Origin::Link(li)));
+                        added[li][dir] = true;
+                        active[li] = true;
+                        changed = true;
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+
+        // 3. Stress groups: rigid components joined by active controllers.
+        let mut uf: Vec<usize> = (0..comps.len()).collect();
+        for (li, l) in self.links.iter().enumerate() {
+            if active[li] {
+                let (ra, rb) = (find(&mut uf, comp_of[l.a]), find(&mut uf, comp_of[l.b]));
+                uf[ra] = rb;
+            }
+        }
+        let mut group_index = vec![usize::MAX; comps.len()];
+        let mut groups: Vec<Vec<usize>> = Vec::new();
+        for c in 0..comps.len() {
+            let r = find(&mut uf, c);
+            if group_index[r] == usize::MAX {
+                group_index[r] = groups.len();
+                groups.push(Vec::new());
+            }
+            groups[group_index[r]].push(c);
+        }
+
+        // 4. Resolve each group.
+        let mut speed = vec![0.0f32; n];
+        let mut subnetwork_of = vec![usize::MAX; n];
+        let mut subnetworks = Vec::with_capacity(groups.len());
+        for (gid, members) in groups.iter().enumerate() {
+            let mut conflict = None;
+            let mut xs = Vec::with_capacity(members.len());
+            for &ci in members {
+                let c = &comps[ci];
+                if conflict.is_none() {
+                    conflict = c.conflict;
+                }
+                // The fastest driver dictates (Create behaviour); opposite directions conflict.
+                let mut x: Option<(f32, NodeId)> = None;
+                for &(xi, node, _) in &c.drivers {
                     match x {
-                        None => x = Some((xi, i)),
+                        None => x = Some((xi, node)),
                         Some((x0, j)) => {
                             if xi.signum() != x0.signum() {
-                                conflict.get_or_insert((j, i));
+                                conflict.get_or_insert((j, node));
                             } else if xi.abs() > x0.abs() {
-                                x = Some((xi, i));
+                                x = Some((xi, node));
                             }
                         }
                     }
                 }
+                xs.push(x.map_or(0.0, |(v, _)| v));
             }
 
-            let x = x.map(|(v, _)| v).unwrap_or(0.0);
-            let impact: f32 = nodes
-                .iter()
-                .map(|&i| match self.roles[i] {
-                    NodeRole::Consumer { impact } => impact * (factor[i] * x).abs(),
-                    _ => 0.0,
-                })
-                .sum();
+            let nodes: Vec<NodeId> =
+                members.iter().flat_map(|&ci| comps[ci].nodes.iter().copied()).collect();
+            let capacity: f32 = members.iter().map(|&ci| comps[ci].capacity).sum();
+            let mut impact = 0.0;
+            let mut overspeed = None;
+            for (k, &ci) in members.iter().enumerate() {
+                for &i in &comps[ci].nodes {
+                    let v = factor[i] * xs[k];
+                    if let NodeRole::Consumer { impact: imp } = self.roles[i] {
+                        impact += imp * v.abs();
+                    }
+                    if overspeed.is_none() && v.abs() > self.max_rpm + EPS {
+                        overspeed = Some(i);
+                    }
+                }
+            }
 
             let status = if let Some((a, b)) = conflict {
                 Status::Conflict { a, b }
-            } else if x.abs() < EPS {
+            } else if xs.iter().all(|x| x.abs() < EPS) {
                 Status::Stopped
-            } else if let Some(&node) = nodes
-                .iter()
-                .find(|&&i| (factor[i] * x).abs() > MAX_RPM + EPS)
-            {
+            } else if let Some(node) = overspeed {
                 Status::Overspeed { node }
             } else if impact > capacity + EPS {
                 Status::Overstressed
@@ -188,9 +299,12 @@ impl Network {
                 Status::Running
             };
 
-            if status == Status::Running {
-                for &i in &nodes {
-                    speed[i] = factor[i] * x;
+            for (k, &ci) in members.iter().enumerate() {
+                for &i in &comps[ci].nodes {
+                    subnetwork_of[i] = gid;
+                    if status == Status::Running {
+                        speed[i] = factor[i] * xs[k];
+                    }
                 }
             }
             subnetworks.push(Subnetwork { nodes, status, capacity, impact });
@@ -198,6 +312,23 @@ impl Network {
 
         Solution { speed, subnetwork_of, subnetworks }
     }
+}
+
+#[derive(Default)]
+struct Rigid {
+    nodes: Vec<NodeId>,
+    conflict: Option<(NodeId, NodeId)>,
+    /// (root speed X this driver demands, node, origin)
+    drivers: Vec<(f32, NodeId, Origin)>,
+    capacity: f32,
+}
+
+fn find(uf: &mut [usize], mut x: usize) -> usize {
+    while uf[x] != x {
+        uf[x] = uf[uf[x]];
+        x = uf[x];
+    }
+    x
 }
 
 fn approx(a: f32, b: f32) -> bool {
@@ -330,5 +461,55 @@ mod tests {
         assert_eq!(s.subnetworks.len(), 2);
         assert_eq!(s.status_of(lone), &Status::Stopped);
         assert_eq!(s.speed[a], 32.0);
+    }
+    #[test]
+    fn speed_controller_drives_output_at_target() {
+        let mut n = Network::new();
+        let m = n.add_node(motor(16.0));
+        let ctrl = n.add_node(NodeRole::Passive);
+        let cog = n.add_node(NodeRole::Passive);
+        let out = n.add_node(NodeRole::Consumer { impact: 1.0 });
+        n.connect(m, ctrl, 1.0);
+        n.connect(cog, out, -2.0);
+        n.connect_controlled(ctrl, cog, 100.0);
+        let s = n.solve();
+        assert_eq!(s.status_of(out), &Status::Running);
+        assert_eq!(s.speed[cog], 100.0);
+        assert_eq!(s.speed[out], -200.0);
+        assert_eq!(s.speed[m], 16.0); // input side keeps its own speed
+        // one shared stress network: 200 SU impact vs 256 SU capacity
+        assert_eq!(s.subnetwork_of[m], s.subnetwork_of[out]);
+        assert_eq!(s.subnetworks[s.subnetwork_of[m]].impact, 200.0);
+    }
+
+    #[test]
+    fn speed_controller_needs_input_rotation() {
+        let mut n = Network::new();
+        let ctrl = n.add_node(NodeRole::Passive);
+        let cog = n.add_node(NodeRole::Passive);
+        n.connect_controlled(ctrl, cog, 64.0);
+        let s = n.solve();
+        assert_eq!(s.speed[cog], 0.0);
+        assert_ne!(s.subnetwork_of[ctrl], s.subnetwork_of[cog]);
+    }
+
+    #[test]
+    fn speed_controller_output_overstress_stops_input_too() {
+        let mut n = Network::new();
+        let m = n.add_node(motor(16.0)); // 256 SU
+        let cog = n.add_node(NodeRole::Consumer { impact: 4.0 });
+        n.connect_controlled(m, cog, 128.0); // 512 SU
+        let s = n.solve();
+        assert_eq!(s.status_of(m), &Status::Overstressed);
+        assert_eq!(s.speed[m], 0.0);
+    }
+
+    #[test]
+    fn custom_max_rpm() {
+        let mut n = Network::new().with_max_rpm(64.0);
+        let m = n.add_node(motor(64.0));
+        let b = n.add_node(NodeRole::Passive);
+        n.connect(m, b, -2.0);
+        assert_eq!(n.solve().status_of(m), &Status::Overspeed { node: b });
     }
 }
