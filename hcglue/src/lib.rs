@@ -14,7 +14,9 @@
 //! On the client, [`Spinner`] turns a readout's RPM into `BlockEntityDraw::spin`
 //! arguments without the part jumping when the speed changes.
 
-use kinetics::presets::capacity;
+pub mod drill;
+
+use kinetics::presets::{capacity, impact};
 use kinetics::{Axis, BlockKind, KineticBlock, KineticWorld, NodeRole, Pos, Status, WorldSolution};
 use std::collections::{HashMap, HashSet};
 
@@ -35,6 +37,7 @@ pub const KINETIC_BLOCKS: &[&str] = &[
     "creative_motor",
     "speedometer",
     "stressometer",
+    "mechanical_drill",
 ];
 
 /// Blocks drawn turning by the block entity (their block model is left out:
@@ -109,6 +112,27 @@ pub fn block_from_state(
                 },
                 a,
             )
+        }
+        // lightning rod template: `facing` is the side it drills
+        "mechanical_drill" => {
+            let (axis, positive) = match prop("facing").as_deref()? {
+                "east" => (Axis::X, true),
+                "west" => (Axis::X, false),
+                "up" => (Axis::Y, true),
+                "down" => (Axis::Y, false),
+                "south" => (Axis::Z, true),
+                "north" => (Axis::Z, false),
+                _ => return None,
+            };
+            KineticBlock::passive(
+                BlockKind::Machine {
+                    facing_positive: positive,
+                },
+                axis,
+            )
+            .with_role(NodeRole::Consumer {
+                impact: impact::MECHANICAL_DRILL,
+            })
         }
         "rotation_speed_controller" => KineticBlock::passive(
             BlockKind::SpeedController {
@@ -413,6 +437,24 @@ mod tests {
             e.report(pos, block_from_state(id, &props(p), signal));
         }
         e.end_level();
+    }
+
+    #[test]
+    fn drill_loads_the_network() {
+        let x: Props = &[("axis", "x")];
+        let east: Props = &[("facing", "east")];
+        let mut e = Engine::new();
+        tick(
+            &mut e,
+            &[
+                ([0, 0, 0], "horizon_create:creative_motor", x, 0),
+                ([1, 0, 0], "horizon_create:mechanical_drill", east, 0),
+            ],
+        );
+        e.begin_level(OW);
+        let r = e.readout([1, 0, 0]);
+        assert_eq!(r.rpm, 16.0);
+        assert_eq!(r.impact, 64.0); // 4 SU/RPM at 16 RPM
     }
 
     #[test]

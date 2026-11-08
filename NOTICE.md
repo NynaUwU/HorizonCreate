@@ -8,7 +8,8 @@ from their source code:
   Code: MIT License, Copyright (c) The Create Team / The Creators of Create.
   Assets (`src/main/resources/assets/`): **All Rights Reserved** — do not copy them.
   Ported from: `RotationPropagator`, `KineticNetwork`, gearbox / split shaft /
-  chain drive / speed controller block entities, `AllBlocks` stress defaults.
+  chain drive / speed controller block entities, `BlockBreakingKineticBlockEntity` and
+  `DrillBlock` (mechanical drill), `AllBlocks` stress defaults.
 
 - **Create: Power Grid** — https://github.com/patryk3211/PowerGrid
   Apache License 2.0, Copyright 2025 patryk3211.

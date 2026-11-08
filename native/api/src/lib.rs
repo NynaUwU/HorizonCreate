@@ -14,6 +14,7 @@
 
 mod engine;
 
+use engine::hcglue::drill::{self, DrillAction, DrillState};
 use engine::hcglue::{self, Engine, Readout, Spinner};
 use engine::kinetics::Axis;
 use horizon_client::mod_api::{
@@ -39,6 +40,7 @@ struct Mod {
 }
 
 const KEYS: [&str; 4] = ["rpm", "impact", "capacity", "status"];
+const DRILL_HEAD: &str = "horizon_create:block/drill_head";
 
 fn read(nbt: &Compound, key: &str) -> Option<&Tag> {
     nbt.iter().find(|(k, _)| k.0.iter().copied().eq(key.encode_utf16())).map(|(_, v)| v)
@@ -50,6 +52,34 @@ fn read_f32(nbt: &Compound, key: &str) -> f32 {
         Some(Tag::Byte(b)) => *b as f32,
         _ => 0.0,
     }
+}
+
+fn read_i32(nbt: &Compound, key: &str) -> i32 {
+    match read(nbt, key) {
+        Some(Tag::Int(v)) => *v,
+        _ => 0,
+    }
+}
+
+fn drill_state_of(nbt: &Compound) -> DrillState {
+    DrillState {
+        progress: read_i32(nbt, "drill_progress"),
+        ticks_until: read_i32(nbt, "drill_ticks"),
+        lazy: read_i32(nbt, "drill_lazy"),
+    }
+}
+
+/// Unit offset and axis vector of a `facing` property value.
+fn facing_offset(facing: &str) -> Option<([i32; 3], [f32; 3])> {
+    Some(match facing {
+        "east" => ([1, 0, 0], [1.0, 0.0, 0.0]),
+        "west" => ([-1, 0, 0], [-1.0, 0.0, 0.0]),
+        "up" => ([0, 1, 0], [0.0, 1.0, 0.0]),
+        "down" => ([0, -1, 0], [0.0, -1.0, 0.0]),
+        "south" => ([0, 0, 1], [0.0, 0.0, 1.0]),
+        "north" => ([0, 0, -1], [0.0, 0.0, -1.0]),
+        _ => return None,
+    })
 }
 
 fn readout_of(nbt: &Compound) -> Readout {
@@ -79,6 +109,7 @@ impl Hooks for Mod {
         for (_, model) in hcglue::SPINNING_MODELS {
             event.models.push((*model).to_string());
         }
+        event.models.push(DRILL_HEAD.to_string());
     }
 
     fn block_entity(&self, _host: &mut dyn Host, event: &mut BlockEntityEvent<'_>) {
@@ -127,6 +158,31 @@ impl Hooks for Mod {
         if readout_of(&entity.nbt) != readout {
             for (key, tag) in readout_tags(&readout) {
                 entity.nbt.insert(key.into(), tag);
+            }
+        }
+
+        if name == "mechanical_drill" {
+            let Some((off, _)) = host.block_property(pos, "facing").as_deref().and_then(facing_offset) else {
+                return;
+            };
+            let target = [pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]];
+            let hardness = drill::hardness(&host.block(target));
+            let mut state = drill_state_of(&entity.nbt);
+            let before = state;
+            let breaker = drill::breaker_id(pos);
+            match state.tick(readout.rpm, hardness) {
+                DrillAction::Nothing => {}
+                DrillAction::Crack(stage) => host.set_break_progress(breaker, target, stage),
+                DrillAction::Reset => host.set_break_progress(breaker, target, -1),
+                DrillAction::Break => {
+                    host.set_break_progress(breaker, target, -1);
+                    host.machine_destroy_block(target, None, false);
+                }
+            }
+            if state != before {
+                entity.nbt.insert("drill_progress".into(), Tag::Int(state.progress));
+                entity.nbt.insert("drill_ticks".into(), Tag::Int(state.ticks_until));
+                entity.nbt.insert("drill_lazy".into(), Tag::Int(state.lazy));
             }
         }
     }
@@ -181,6 +237,28 @@ impl Hooks for Mod {
             host.draw_model(draw, model, 0xFFFFFF);
             draw.still();
             draw.pop();
+        }
+
+        if name == "mechanical_drill" {
+            let facing = host.block_state_property(event.state, "facing").map(|f| f.to_string());
+            if let Some((_, dir)) = facing.as_deref().and_then(facing_offset) {
+                let spin = self.spinners.lock().unwrap().entry(event.pos).or_default().update(readout.rpm, draw.game_time);
+                let centre = [0.5, 0.5, 0.5];
+                draw.push();
+                draw.spin(dir, centre, spin.degrees_per_tick, spin.phase);
+                // the bit model points up: turn it to the drill's facing
+                match facing.as_deref() {
+                    Some("down") => draw.rotate_about([1.0, 0.0, 0.0], 180.0, centre),
+                    Some("north") => draw.rotate_about([1.0, 0.0, 0.0], -90.0, centre),
+                    Some("south") => draw.rotate_about([1.0, 0.0, 0.0], 90.0, centre),
+                    Some("east") => draw.rotate_about([0.0, 0.0, 1.0], -90.0, centre),
+                    Some("west") => draw.rotate_about([0.0, 0.0, 1.0], 90.0, centre),
+                    _ => {}
+                }
+                host.draw_model(draw, DRILL_HEAD, 0xFFFFFF);
+                draw.still();
+                draw.pop();
+            }
         }
 
         if let Some(line) = hcglue::gauge_text(name, &readout) {

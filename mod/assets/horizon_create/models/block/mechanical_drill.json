@@ -1,0 +1,68 @@
+{
+  "textures": {
+    "particle": "horizon_create:block/andesite_casing",
+    "side": "horizon_create:block/andesite_casing",
+    "front": "horizon_create:block/drill_front",
+    "back": "horizon_create:block/gearbox",
+    "bit": "horizon_create:block/drill_head"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        10,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side",
+          "uv": [
+            0,
+            6,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#side",
+          "uv": [
+            0,
+            6,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#side",
+          "uv": [
+            0,
+            6,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#side",
+          "uv": [
+            0,
+            6,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#front"
+        },
+        "down": {
+          "texture": "#back",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

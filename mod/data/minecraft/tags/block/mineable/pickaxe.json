@@ -10,6 +10,7 @@
     "horizon_create:rotation_speed_controller",
     "horizon_create:creative_motor",
     "horizon_create:speedometer",
-    "horizon_create:stressometer"
+    "horizon_create:stressometer",
+    "horizon_create:mechanical_drill"
   ]
 }

@@ -162,6 +162,12 @@ pub enum BlockKind {
     SpeedController {
         target: i32,
     },
+    /// A machine facing along its axis (drill, saw, deployer: Create's
+    /// `DirectionalKineticBlock` machines). Its only shaft is on its back, the face
+    /// opposite the one it works on.
+    Machine {
+        facing_positive: bool,
+    },
 }
 
 impl BlockKind {
@@ -247,6 +253,9 @@ impl KineticBlock {
             }
             SpeedController { .. } => {
                 (face.axis == self.axis && self.axis.is_horizontal()).then_some((0, 1.0))
+            }
+            Machine { facing_positive } => {
+                (face.axis == self.axis && face.positive != facing_positive).then_some((0, 1.0))
             }
             Shaft | Cogwheel | LargeCogwheel => (face.axis == self.axis).then_some((0, 1.0)),
         }
@@ -915,5 +924,41 @@ mod tests {
             shaft(Axis::X).with_role(NodeRole::Consumer { impact: 4.0 }),
         );
         assert_eq!(w.solve().stress_at(Pos::new(1, 0, 0)), Some((64.0, 256.0)));
+    }
+
+    #[test]
+    fn machine_takes_rotation_only_from_its_back() {
+        // drill facing +X at (1,0,0): shaft behind it at (0,0,0) connects, the block in
+        // front (2,0,0) doesn't
+        let mut w = KineticWorld::new();
+        let drill = Pos::new(1, 0, 0);
+        w.place(P0, motor(Axis::X, 32.0));
+        w.place(
+            drill,
+            KineticBlock::passive(
+                Machine {
+                    facing_positive: true,
+                },
+                Axis::X,
+            )
+            .with_role(NodeRole::Consumer { impact: 4.0 }),
+        );
+        w.place(Pos::new(2, 0, 0), shaft(Axis::X));
+        let s = w.solve();
+        assert_eq!(s.speed_at(drill), Some(32.0));
+        assert_eq!(s.speed_at(Pos::new(2, 0, 0)), Some(0.0));
+        assert_eq!(s.stress_at(drill), Some((128.0, 512.0)));
+
+        // turned around, its back faces away from the motor
+        w.place(
+            drill,
+            KineticBlock::passive(
+                Machine {
+                    facing_positive: false,
+                },
+                Axis::X,
+            ),
+        );
+        assert_eq!(w.solve().speed_at(drill), Some(0.0));
     }
 }

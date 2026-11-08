@@ -274,6 +274,25 @@ def cog_hub(x, y):
     return rivets(x, y, c, [(3, 3), (12, 3), (3, 12), (12, 12)])
 
 
+def drill_head(x, y):
+    """Iron bit with diagonal flutes (the spiral seen from the side)."""
+    v = 0.92 + 0.08 * noise(x, y, 51)
+    if (x + y) % 5 == 0:
+        v *= 0.62  # flute
+    elif (x + y) % 5 == 1:
+        v *= 1.12  # edge catching the light
+    return shade(IRON, v)
+
+
+def drill_front(x, y):
+    c = andesite_casing(x, y)
+    if ring(x, y, 5.5, 0):
+        c = shade(IRON_DARK, 0.85 + 0.1 * noise(x, y, 52))
+        if ring(x, y, 5.5, 4.6):
+            c = shade(IRON_DARK, 0.6)
+    return c
+
+
 def crank_handle(x, y):
     return planks(x, y, WOOD_DARK, seed=31, vertical=True)
 
@@ -319,6 +338,8 @@ BLOCK = {
     "cog_wood_end": cog_wood_end,
     "cog_hub": cog_hub,
     "crank_handle": crank_handle,
+    "drill_head": drill_head,
+    "drill_front": drill_front,
 }
 ITEM = {"andesite_alloy": andesite_alloy}
 

@@ -1,0 +1,334 @@
+//! Mechanical drill: Create's `BlockBreakingKineticBlockEntity.tick`, step by step.
+//!
+//! Every tick the drill turns, it waits `ticks_until` ticks, then adds
+//! `clamp(break_speed / hardness, 1, 10 - progress)` to its progress (break speed =
+//! |RPM| / 100). At 10 the block breaks and the drill rests until its next lazy tick
+//! (every 10 ticks), like Create's.
+
+/// Create's `getBreakSpeed`: |RPM| / 100.
+pub fn break_speed(rpm: f32) -> f32 {
+    rpm.abs() / 100.0
+}
+
+/// Create's `DrillBlock.getDamage`: damage to entities inside the drill's front.
+pub fn damage(rpm: f32) -> f32 {
+    let s = rpm.abs();
+    let sub1 = (s / 16.0).min(2.0);
+    let sub2 = (s / 32.0).min(4.0);
+    let sub3 = (s / 64.0).min(4.0);
+    (sub1 + sub2 + sub3).clamp(1.0, 10.0)
+}
+
+/// `SmartBlockEntity`'s default lazy tick rate.
+pub const LAZY_TICK_RATE: i32 = 10;
+
+/// What a drill keeps between ticks (saved in its block entity).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DrillState {
+    /// 0..10.
+    pub progress: i32,
+    /// Ticks to wait before the next hit; -1 = resting after a break.
+    pub ticks_until: i32,
+    /// Counts down to the next lazy tick.
+    pub lazy: i32,
+}
+
+/// What the game should do after a drill's tick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DrillAction {
+    Nothing,
+    /// Show the crack at this stage (`destroyBlockProgress`, 1..9).
+    Crack(i32),
+    /// Break the block in front, and take the crack away.
+    Break,
+    /// The block can't be broken any more: take the crack away.
+    Reset,
+}
+
+impl DrillState {
+    /// One server tick. `hardness` is the block in front's destroy time, `None` for
+    /// air, fluids and unbreakable blocks.
+    pub fn tick(&mut self, rpm: f32, hardness: Option<f32>) -> DrillAction {
+        // lazyTick: wake up after a break
+        self.lazy -= 1;
+        if self.lazy <= 0 {
+            self.lazy = LAZY_TICK_RATE;
+            if self.ticks_until == -1 {
+                self.ticks_until = 1;
+            }
+        }
+        if rpm == 0.0 || self.ticks_until < 0 {
+            return DrillAction::Nothing;
+        }
+        if self.ticks_until > 0 {
+            self.ticks_until -= 1;
+            return DrillAction::Nothing;
+        }
+        let Some(hardness) = hardness else {
+            if self.progress != 0 {
+                self.progress = 0;
+                return DrillAction::Reset;
+            }
+            return DrillAction::Nothing;
+        };
+        let speed = break_speed(rpm);
+        // Java's (int) of a float saturates like Rust's `as`
+        let step = ((speed / hardness) as i32).clamp(1, (10 - self.progress).max(1));
+        self.progress += step;
+        if self.progress >= 10 {
+            self.progress = 0;
+            self.ticks_until = -1;
+            return DrillAction::Break;
+        }
+        self.ticks_until = (hardness / speed) as i32;
+        DrillAction::Crack(self.progress)
+    }
+}
+
+/// A negative breaker id of its own for the crack, stable for a position
+/// (`destroyBlockProgress` replaces the previous stage of the same id).
+pub fn breaker_id(pos: [i32; 3]) -> i32 {
+    let mut h: u32 = 0x811C_9DC5;
+    for v in pos {
+        for b in v.to_le_bytes() {
+            h ^= b as u32;
+            h = h.wrapping_mul(0x0100_0193);
+        }
+    }
+    -1 - (h & 0x3FFF_FFFF) as i32
+}
+
+/// Vanilla destroy time (`BlockBehaviour.Properties.destroyTime`) of a block, for
+/// the drill. Horizon doesn't give mods block hardness yet, so this table holds
+/// the common blocks; anything else counts as 2.0 (planks, logs, cobblestone).
+/// `None`: air, fluids and what Create won't break (bedrock, portals, command blocks...).
+pub fn hardness(id: &str) -> Option<f32> {
+    let name = id.strip_prefix("minecraft:").unwrap_or(id);
+    if UNBREAKABLE.contains(&name) {
+        return None;
+    }
+    if let Some(&(_, h)) = TABLE.iter().find(|(n, _)| *n == name) {
+        return Some(h);
+    }
+    // families
+    let h = if name.starts_with("deepslate_") && name.ends_with("_ore") {
+        4.5
+    } else if name.ends_with("_ore") {
+        3.0
+    } else if name.ends_with("_leaves") {
+        0.2
+    } else if name.ends_with("_wool") || name.ends_with("_carpet") {
+        if name.ends_with("_carpet") {
+            0.1
+        } else {
+            0.8
+        }
+    } else if name.ends_with("_concrete_powder") {
+        0.5
+    } else if name.ends_with("_concrete") {
+        1.8
+    } else if name.ends_with("_terracotta") || name == "terracotta" {
+        1.25
+    } else if name.ends_with("_glass") || name.ends_with("_glass_pane") {
+        0.3
+    } else if name.ends_with("_sapling")
+        || name.ends_with("_flower")
+        || name.ends_with("_tulip")
+        || name.ends_with("torch")
+        || name.ends_with("_button")
+        || name.ends_with("_mushroom")
+    {
+        0.0
+    } else if name.contains("deepslate") {
+        3.5
+    } else {
+        // logs, wood, planks, cobblestone and most building blocks
+        2.0
+    };
+    Some(h)
+}
+
+const UNBREAKABLE: &[&str] = &[
+    "air",
+    "cave_air",
+    "void_air",
+    "water",
+    "lava",
+    "bubble_column",
+    "bedrock",
+    "barrier",
+    "light",
+    "end_portal",
+    "end_portal_frame",
+    "end_gateway",
+    "nether_portal",
+    "command_block",
+    "chain_command_block",
+    "repeating_command_block",
+    "structure_block",
+    "structure_void",
+    "jigsaw",
+    "moving_piston",
+    "reinforced_deepslate",
+    "test_block",
+    "test_instance_block",
+];
+
+const TABLE: &[(&str, f32)] = &[
+    ("stone", 1.5),
+    ("cobblestone", 2.0),
+    ("mossy_cobblestone", 2.0),
+    ("stone_bricks", 1.5),
+    ("granite", 1.5),
+    ("diorite", 1.5),
+    ("andesite", 1.5),
+    ("polished_granite", 1.5),
+    ("polished_diorite", 1.5),
+    ("polished_andesite", 1.5),
+    ("tuff", 1.5),
+    ("calcite", 0.75),
+    ("dripstone_block", 1.5),
+    ("deepslate", 3.0),
+    ("cobbled_deepslate", 3.5),
+    ("dirt", 0.5),
+    ("coarse_dirt", 0.5),
+    ("rooted_dirt", 0.5),
+    ("grass_block", 0.6),
+    ("podzol", 0.5),
+    ("mycelium", 0.6),
+    ("mud", 0.5),
+    ("clay", 0.6),
+    ("farmland", 0.6),
+    ("dirt_path", 0.65),
+    ("sand", 0.5),
+    ("red_sand", 0.5),
+    ("gravel", 0.6),
+    ("sandstone", 0.8),
+    ("red_sandstone", 0.8),
+    ("ice", 0.5),
+    ("packed_ice", 0.5),
+    ("blue_ice", 2.8),
+    ("snow", 0.1),
+    ("snow_block", 0.2),
+    ("netherrack", 0.4),
+    ("soul_sand", 0.5),
+    ("soul_soil", 0.5),
+    ("basalt", 1.25),
+    ("blackstone", 1.5),
+    ("magma_block", 0.5),
+    ("glowstone", 0.3),
+    ("end_stone", 3.0),
+    ("obsidian", 50.0),
+    ("crying_obsidian", 50.0),
+    ("ancient_debris", 30.0),
+    ("nether_quartz_ore", 3.0),
+    ("nether_gold_ore", 3.0),
+    ("iron_block", 5.0),
+    ("gold_block", 3.0),
+    ("diamond_block", 5.0),
+    ("copper_block", 3.0),
+    ("coal_block", 5.0),
+    ("raw_iron_block", 5.0),
+    ("amethyst_block", 1.5),
+    ("glass", 0.3),
+    ("bricks", 2.0),
+    ("terracotta", 1.25),
+    ("short_grass", 0.0),
+    ("tall_grass", 0.0),
+    ("fern", 0.0),
+    ("dandelion", 0.0),
+    ("poppy", 0.0),
+    ("sugar_cane", 0.0),
+    ("pumpkin", 1.0),
+    ("melon", 1.0),
+    ("cactus", 0.4),
+    ("hay_block", 0.5),
+    ("bookshelf", 1.5),
+    ("crafting_table", 2.5),
+    ("furnace", 3.5),
+    ("chest", 2.5),
+];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ticks until the block breaks, or None within `limit`.
+    fn ticks_to_break(rpm: f32, h: Option<f32>, limit: usize) -> Option<usize> {
+        let mut s = DrillState::default();
+        (1..=limit).find(|_| s.tick(rpm, h) == DrillAction::Break)
+    }
+
+    #[test]
+    fn stone_breaks_faster_at_higher_speed() {
+        let stone = hardness("minecraft:stone");
+        // 32 RPM: 1 stage every 5 ticks -> 10 stages ~ 46 ticks
+        let slow = ticks_to_break(32.0, stone, 1000).unwrap();
+        // 256 RPM: 1 stage per tick
+        let fast = ticks_to_break(256.0, stone, 1000).unwrap();
+        assert!((40..=50).contains(&slow), "{slow}");
+        assert_eq!(fast, 10);
+    }
+
+    #[test]
+    fn instant_blocks_and_unbreakables() {
+        assert_eq!(
+            ticks_to_break(16.0, hardness("minecraft:short_grass"), 10),
+            Some(1)
+        );
+        assert_eq!(
+            ticks_to_break(256.0, hardness("minecraft:bedrock"), 10_000),
+            None
+        );
+        assert_eq!(hardness("minecraft:water"), None);
+        assert_eq!(hardness("minecraft:deepslate_iron_ore"), Some(4.5));
+        assert_eq!(hardness("minecraft:iron_ore"), Some(3.0));
+        assert_eq!(hardness("othermod:thing"), Some(2.0));
+    }
+
+    #[test]
+    fn stopped_drill_does_nothing() {
+        let mut s = DrillState::default();
+        for _ in 0..100 {
+            assert_eq!(s.tick(0.0, hardness("stone")), DrillAction::Nothing);
+        }
+        assert_eq!(s.progress, 0);
+    }
+
+    #[test]
+    fn rests_until_lazy_tick_after_a_break() {
+        let mut s = DrillState::default();
+        let h = Some(0.0);
+        assert_eq!(s.tick(64.0, h), DrillAction::Break);
+        // resting: nothing until the lazy tick wakes it (<= 10 ticks), then the next hit
+        let next = (1..=20)
+            .find(|_| s.tick(64.0, h) == DrillAction::Break)
+            .unwrap();
+        assert!(next <= 11, "{next}");
+    }
+
+    #[test]
+    fn crack_resets_when_block_goes_away() {
+        let mut s = DrillState::default();
+        assert!(matches!(s.tick(32.0, Some(1.5)), DrillAction::Crack(1)));
+        for _ in 0..4 {
+            s.tick(32.0, Some(1.5));
+        }
+        assert_eq!(s.tick(32.0, None), DrillAction::Reset);
+        assert_eq!(s.progress, 0);
+    }
+
+    #[test]
+    fn damage_matches_create() {
+        assert_eq!(damage(0.0), 1.0);
+        assert_eq!(damage(64.0), 2.0 + 2.0 + 1.0);
+        assert_eq!(damage(256.0), 10.0);
+    }
+
+    #[test]
+    fn breaker_ids_are_negative_and_differ() {
+        let a = breaker_id([0, 64, 0]);
+        let b = breaker_id([1, 64, 0]);
+        assert!(a < 0 && b < 0 && a != b);
+    }
+}

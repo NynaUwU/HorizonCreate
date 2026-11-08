@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " I ",
+    "IAI",
+    " C "
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "A": "horizon_create:andesite_alloy",
+    "C": "horizon_create:andesite_casing"
+  },
+  "result": {
+    "id": "horizon_create:mechanical_drill",
+    "count": 1
+  }
+}

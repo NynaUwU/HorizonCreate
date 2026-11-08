@@ -1,0 +1,20 @@
+{
+  "template": "minecraft:lightning_rod",
+  "properties": {
+    "hardness": 2.0,
+    "sounds": "minecraft:oak_planks",
+    "random_ticks": false
+  },
+  "shapes": {
+    "default": [
+      [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ]
+    ]
+  }
+}

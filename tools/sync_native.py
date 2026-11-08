@@ -26,8 +26,9 @@ def main():
     for f in ("network.rs", "placement.rs", "presets.rs"):
         copy(f"kinetics/src/{f}", DST / "kinetics" / f)
     copy("kinetics/src/lib.rs", DST / "kinetics" / "mod.rs")
-    copy("hcglue/src/lib.rs", DST / "hcglue.rs",
-         lambda s: s.replace("use kinetics::", "use super::kinetics::"))
+    rewrite = lambda s: s.replace("use kinetics::", "use super::kinetics::")
+    copy("hcglue/src/lib.rs", DST / "hcglue" / "mod.rs", rewrite)
+    copy("hcglue/src/drill.rs", DST / "hcglue" / "drill.rs", rewrite)
     (DST / "mod.rs").write_text(HEADER.format(src="tools/sync_native.py")
                                 + "#![allow(dead_code, unused_imports)]\npub mod hcglue;\npub mod kinetics;\n")
     print(f"synced -> {DST.relative_to(ROOT)}")

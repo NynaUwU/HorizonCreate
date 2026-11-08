@@ -9,7 +9,7 @@ O mod tem duas metades com o mesmo id (`horizon_create`):
 
 ## 1. Preparar os arquivos
 
-**Atalho:** os arquivos prontos estão em [`releases/v0.1.0/`](../releases/v0.1.0/) (`.hmod` e `.hnmod`).
+**Atalho:** os arquivos prontos estão em [`releases/v0.2.0/`](../releases/v0.2.0/) (`.hmod` e `.hnmod`).
 Para gerar de novo depois de mudar algo:
 
 ```sh
@@ -24,7 +24,7 @@ python3 tools/package.py          # gera dist/horizon_create-<versão>.hmod e .h
 
 Na pasta do jogo (a que tem o `options.txt`):
 
-1. Copie **`horizon_create-0.1.0.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
+1. Copie **`horizon_create-0.2.0.hmod`** (ou a pasta `mod/` inteira) para `horizon-mods/`.
 2. Abra o jogo → **Opções → Mods** → ligue **Horizon Create**.
 3. Como o mod adiciona blocos, o jogo pede para **reiniciar**. Reinicie.
 4. Se algo estiver errado, a linha do mod fica **vermelha** com o motivo.
@@ -41,7 +41,7 @@ cd mod && cargo horizon-mod run
 
 ## 3. Instalar o native mod
 
-1. Copie **`horizon_create-0.1.0.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
+1. Copie **`horizon_create-0.2.0.hnmod`** para `horizon-native-mods/` (ou a pasta `native/` para `horizon-native-mods/horizon_create/`).
 2. O launcher mostra o aviso de confiança (mods nativos não rodam em sandbox) e **compila o jogo com o mod**.
    A primeira compilação demora bastante.
 
@@ -71,10 +71,15 @@ horizon-launcher native-build native --instance <sua instância> --trust-native-
 | Câmbio de corrente | sinal 15 | o que ele aciona gira **2×** |
 | Controlador | Engrenagem Grande deitada em cima do controlador | gira em 16 + 16 × sinal RPM |
 | Overspeed | controlador a 256 + engrenagem pequena na grande | tudo para (512 RPM > 256) |
+| Furadeira | Motor Criativo → eixo → Furadeira (eixo entra por trás) virada para pedra | a broca gira, aparece a rachadura e a pedra quebra (~2,5 s a 32 RPM, 0,5 s a 256 RPM); o medidor mostra o consumo de 4 SU/RPM |
+| Furadeira vs. obsidiana | mesma montagem a 16 RPM | demora muito (dureza 50); bedrock nunca quebra |
+| Sobrecarga | Manivela (256 SU) → 2 Furadeiras a 32 RPM (2 × 128 SU) | roda; com 3 furadeiras (384 SU) tudo para |
 
 ## 5. Limitações desta versão (0.1)
 
 - Só **single player / host de LAN** (mods nativos ainda não rodam em servidor dedicado).
 - Velocidade do motor e do controlador é por **redstone** (o Horizon ainda não tem o painel de rolagem do Create).
-- Sem máquinas consumidoras ainda (prensa, misturador...): o medidor de stress mostra só a capacidade.
+- Só uma máquina por enquanto: a **Furadeira Mecânica**. Ela ainda não fere entidades na frente
+  (o Horizon não tem helper de dano para mods) e usa uma tabela própria de dureza dos blocos vanilla
+  (o Horizon também não expõe a dureza); blocos de outros mods contam como dureza 2.
 - A parte elétrica (Power Grid) está pronta nas bibliotecas, mas ainda sem blocos no jogo.

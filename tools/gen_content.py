@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "mod"
 NS = "horizon_create"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 def write(rel, data):
@@ -146,6 +146,30 @@ def crank_variants():
     return {"variants": variants}
 
 
+# mechanical drill, pointing up: casing body (block model) + bit (drawn turning)
+DRILL_BODY = [{
+    "from": [0, 0, 0], "to": [16, 10, 16],
+    "faces": {d: face("#side", [0, 6, 16, 16]) for d in ("north", "south", "east", "west")}
+    | {"up": face("#front"), "down": face("#back", None, "down")},
+}]
+DRILL_HEAD = [
+    box([3, 10, 3], [13, 12, 13], "#bit", "#bit"),
+    box([4.5, 12, 4.5], [11.5, 14, 11.5], "#bit", "#bit"),
+    box([6, 14, 6], [10, 15.5, 10], "#bit", "#bit"),
+    box([7, 15.5, 7], [9, 16, 9], "#bit", "#bit"),
+]
+DRILL_TEXTURES = {"particle": tex("andesite_casing"), "side": tex("andesite_casing"), "front": tex("drill_front"),
+                  "back": tex("gearbox"), "bit": tex("drill_head")}
+
+# blockstate rotations that take an up-pointing model to each facing (end rod / piston layout)
+FACING_ROT = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "south": {"x": 90, "y": 180},
+              "west": {"x": 90, "y": 270}, "east": {"x": 90, "y": 90}}
+
+
+def facing_variants(model):
+    return {"variants": {f"facing={f}": {"model": model} | rot for f, rot in FACING_ROT.items()}}
+
+
 # ------------------------------------------------------------------ blocks
 AXIS_SHAPES = {
     "cog": {
@@ -259,7 +283,20 @@ BLOCKS = {
         {"stressometer": model_column("stressometer_face", "gearbox")},
         "pickaxe", "Stressometer", "Medidor de Stress",
     ),
+    "mechanical_drill": (
+        {"template": "minecraft:lightning_rod",
+         "properties": {"hardness": 2.0, "sounds": WOOD_SOUND, "random_ticks": False},
+         "shapes": {"default": [[0, 0, 0, 1, 1, 1]]}},
+        facing_variants(f"{NS}:block/mechanical_drill"),
+        {"mechanical_drill": {"textures": DRILL_TEXTURES, "elements": DRILL_BODY},
+         "drill_head": {"textures": DRILL_TEXTURES, "elements": DRILL_HEAD},
+         "mechanical_drill_item": {"textures": DRILL_TEXTURES, "elements": DRILL_BODY + DRILL_HEAD}},
+        "pickaxe", "Mechanical Drill", "Furadeira Mecânica",
+    ),
 }
+
+# blocks whose item shows another model than the block (the drill's bit is drawn by its block entity)
+ITEM_MODEL = {"mechanical_drill": f"{NS}:block/mechanical_drill_item"}
 
 ITEMS = {
     "andesite_alloy": ({"template": "minecraft:iron_ingot"}, "Andesite Alloy", "Liga de Andesito"),
@@ -305,6 +342,8 @@ RECIPES = {
     "hand_crank": shaped(["PPP", "  A"], {"P": "#minecraft:planks", "A": A}, "hand_crank"),
     "speedometer": shapeless([CASING, "minecraft:compass"], "speedometer"),
     "stressometer": shapeless([CASING, "minecraft:clock"], "stressometer"),
+    "mechanical_drill": shaped([" I ", "IAI", " C "], {"I": "minecraft:iron_ingot", "A": A, "C": CASING},
+                               "mechanical_drill"),
 }
 
 
@@ -327,7 +366,7 @@ def main():
     write("horizon-mod.toml", f'''id = "{NS}"
 name = "Horizon Create"
 version = "{VERSION}"
-description = "Rotational power from Create, ported to Horizon: shafts, cogwheels, gearboxes, clutches, chain drives, gauges. Needs the horizon_create native mod for the moving parts."
+description = "Rotational power from Create, ported to Horizon: shafts, cogwheels, gearboxes, clutches, chain drives, gauges. Needs the horizon_create native mod for the moving parts and machines."
 authors = ["NynaUwU"]
 api = "0.2"
 side = "both"
@@ -340,7 +379,8 @@ capabilities = ["registries"]
         write(f"assets/{NS}/blockstates/{name}.json", states)
         for model_name, model in models.items():
             write(f"assets/{NS}/models/block/{model_name}.json", model)
-        write(f"assets/{NS}/items/{name}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}"}})
+        item_model = ITEM_MODEL.get(name, f"{NS}:block/{name}")
+        write(f"assets/{NS}/items/{name}.json", {"model": {"type": "minecraft:model", "model": item_model}})
         write(f"data/{NS}/loot_table/blocks/{name}.json", loot(name))
         tags[tool].append(f"{NS}:{name}")
         en[f"block.{NS}.{name}"] = english

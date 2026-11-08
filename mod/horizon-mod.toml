@@ -1,7 +1,7 @@
 id = "horizon_create"
 name = "Horizon Create"
-version = "0.1.0"
-description = "Rotational power from Create, ported to Horizon: shafts, cogwheels, gearboxes, clutches, chain drives, gauges. Needs the horizon_create native mod for the moving parts."
+version = "0.2.0"
+description = "Rotational power from Create, ported to Horizon: shafts, cogwheels, gearboxes, clutches, chain drives, gauges. Needs the horizon_create native mod for the moving parts and machines."
 authors = ["NynaUwU"]
 api = "0.2"
 side = "both"

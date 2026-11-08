@@ -16,6 +16,7 @@
     "horizon_create:hand_crank",
     "horizon_create:creative_motor",
     "horizon_create:speedometer",
-    "horizon_create:stressometer"
+    "horizon_create:stressometer",
+    "horizon_create:mechanical_drill"
   ]
 }

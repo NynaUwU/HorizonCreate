@@ -10,4 +10,6 @@ Create's rotational power (and Power Grid's physics, in the libraries) for Horiz
    hook points API 411 or later (Nightly 2026-11-07 onwards).
 
 Both files are needed: without the native mod the blocks exist but nothing turns.
+New in 0.2.0: the **mechanical drill** (4 SU/RPM, breaks the block in front, faster with speed).
+
 Single player / LAN host only for now. Full guide: `docs/TESTAR-NO-JOGO.md`.
